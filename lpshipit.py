@@ -8,7 +8,6 @@ Once run in the directory of your cloned repo it will prompt which branches
 to merge. This does not push any changes.
 """
 import os
-import subprocess
 
 import click
 import git
