@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 """
 LPShipit script will merge all commits from a given feature branch
 as a single non fast forward merge, while adding the proper agreed upon
@@ -6,6 +6,23 @@ commit message formatting.
 
 Once run in the directory of your cloned repo it will prompt which branches
 to merge. This does not push any changes.
+
+lpshipit depend on ``launchpadlib``, which isn't
+necessarily up-to-date in PyPI, so we install it from the archive::
+
+`sudo apt-get install python-launchpadlib` OR
+
+`sudo apt-get install python3-launchpadlib` OR
+
+As we're using ``launchpadlib`` from the archive (which is therefore
+installed in the system), you'll need to create your virtualenvs
+with the ``--system-site-packages`` option.
+
+Activate your virtualenv and install the requirements::
+
+`pip install -r requirements.txt`
+
+
 """
 import os
 
