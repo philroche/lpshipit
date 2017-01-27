@@ -114,7 +114,8 @@ def lpshipit(directory, source_branch, target_branch):
                       for mp in mp_summaries]
         chosen_mp, chosen_mp_index = pick(
             mp_options, "Merge Proposal",
-            indicator='=>')
+            indicator='=>',
+            line_count=4)
 
         chosen_mp_summary = mp_summaries[chosen_mp_index]
 

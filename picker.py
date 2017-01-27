@@ -1,7 +1,25 @@
+from math import floor
 from pick import Picker as PickerUpstream
 
 
 class Picker(PickerUpstream):
+
+    def __init__(self, options, title=None, indicator='*', default_index=0,
+                 line_count=1):
+
+        if len(options) == 0:
+            raise ValueError('options should not be an empty list')
+
+        self.options = options
+        self.title = title
+        self.indicator = indicator
+
+        if default_index >= len(options):
+            raise ValueError('default_index should be less than the length of options')
+
+        self.index = default_index
+        self.custom_handlers = {}
+        self.line_count = line_count
 
     def draw(self):
         """draw the curses ui on the screen, handle scroll if needed"""
@@ -9,7 +27,8 @@ class Picker(PickerUpstream):
 
         x, y = 1, 1  # start point
         max_y, max_x = self.screen.getmaxyx()
-        max_rows = max_y - y  # the max rows we can draw
+        # the max rows we can draw
+        max_rows = floor((max_y - y) / self.line_count)
 
         lines, current_line = self.get_lines()
 
@@ -25,12 +44,15 @@ class Picker(PickerUpstream):
 
         for line in lines_to_draw:
             self.screen.addstr(y, x, line)
-            y += 1
+            if line in self.get_title_lines():
+                y += 1
+            else:
+                y += self.line_count
 
         self.screen.refresh()
 
 
-def pick(options, title=None, indicator='*', default_index=0):
+def pick(options, title=None, indicator='*', default_index=0, line_count=1):
     """Construct and start a :class:`Picker <Picker>`.
 
     Usage::
@@ -40,5 +62,5 @@ def pick(options, title=None, indicator='*', default_index=0):
       >>> options = ['option1', 'option2', 'option3']
       >>> option, index = pick(options, title)
     """
-    picker = Picker(options, title, indicator, default_index)
+    picker = Picker(options, title, indicator, default_index, line_count)
     return picker.start()
