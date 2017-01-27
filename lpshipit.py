@@ -85,58 +85,62 @@ def lpshipit(directory, source_branch, target_branch):
 
     person = lp.people[lp_user.name]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
-    mp_summaries = summarize_mps(mps)
-    mp_options = ["{source_repo}/{source_branch}"
-                  "->{target_repo}/{target_branch}"
-                  "\n\t{approval_count} approvals "
-                  "\n\t{web} "
-                  .format(**mp) for mp in mp_summaries]
-    chosen_mp, chosen_mp_index = pick(
-        mp_options, "Merge Proposal",
-        indicator='=>')
+    if mps:
+        mp_summaries = summarize_mps(mps)
+        mp_options = ["{source_repo}/{source_branch}"
+                      "->{target_repo}/{target_branch}"
+                      "\n\t{approval_count} approvals "
+                      "\n\t{web} "
+                      .format(**mp) for mp in mp_summaries]
+        chosen_mp, chosen_mp_index = pick(
+            mp_options, "Merge Proposal",
+            indicator='=>')
 
-    chosen_mp_summary = mp_summaries[chosen_mp_index]
+        chosen_mp_summary = mp_summaries[chosen_mp_index]
 
-    local_branches = [branch.name for branch in repo.branches]
+        local_branches = [branch.name for branch in repo.branches]
 
-    if not source_branch:
-        source_branch, source_branch_index = pick(
-            local_branches, "Source Branch",
-            indicator='=>',
-            default_index=
-            local_branches.index(chosen_mp_summary['source_branch'])
-            if chosen_mp_summary['source_branch'] in local_branches
-            else local_branches.index(checkedout_branch.name))
+        if not source_branch:
+            source_branch, source_branch_index = pick(
+                local_branches, "Source Branch",
+                indicator='=>',
+                default_index=
+                local_branches.index(chosen_mp_summary['source_branch'])
+                if chosen_mp_summary['source_branch'] in local_branches
+                else local_branches.index(checkedout_branch.name))
 
-    if not target_branch:
-        target_branch, target_branch_index = pick(
-            local_branches, "Target Branch",
-            indicator='=>',
-            default_index=
-            local_branches.index(chosen_mp_summary['target_branch'])
-            if chosen_mp_summary['target_branch'] in local_branches
-            else 0)
+        if not target_branch:
+            target_branch, target_branch_index = pick(
+                local_branches, "Target Branch",
+                indicator='=>',
+                default_index=
+                local_branches.index(chosen_mp_summary['target_branch'])
+                if chosen_mp_summary['target_branch'] in local_branches
+                else 0)
 
-    if target_branch != source_branch:
-        commit_message = build_commit_msg(
-            author=chosen_mp_summary['author'],
-            reviewers=",".join(chosen_mp_summary['reviewers']),
-            source_branch=source_branch,
-            target_branch=target_branch,
-            commit_message=chosen_mp_summary['description'],
-            mp_web_link=chosen_mp_summary['web']
-            )
-
-        repo.branches[target_branch].checkout()
-
-        local_git.execute(["git", "merge",  "--no-ff", source_branch,
-                           "-m", commit_message])
-
-        print("{source_branch} has been merged in to {target_branch} \n"
-              "Changes have _NOT_ been pushed".format(
+        if target_branch != source_branch:
+            commit_message = build_commit_msg(
+                author=chosen_mp_summary['author'],
+                reviewers=",".join(chosen_mp_summary['reviewers']),
                 source_branch=source_branch,
-                target_branch=target_branch
-                ))
+                target_branch=target_branch,
+                commit_message=chosen_mp_summary['description'],
+                mp_web_link=chosen_mp_summary['web']
+                )
+
+            repo.branches[target_branch].checkout()
+
+            local_git.execute(["git", "merge",  "--no-ff", source_branch,
+                               "-m", commit_message])
+
+            print("{source_branch} has been merged in to {target_branch} \n"
+                  "Changes have _NOT_ been pushed".format(
+                    source_branch=source_branch,
+                    target_branch=target_branch
+                    ))
+    else:
+        print("You have no Merge Proposals in either "
+              "'Needs review' or 'Approved' state")
 
 
 if __name__ == "__main__":
