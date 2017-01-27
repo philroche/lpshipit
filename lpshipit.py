@@ -50,31 +50,32 @@ def _format_git_branch_name(branch_name):
 def summarize_mps(mps):
     mp_content = []
     for mp in mps:
-        review_vote_parts = []
-        approval_count = 0
-        for vote in mp.votes:
-            if not vote.is_pending:
-                review_vote_parts.append(vote.reviewer.name)
-                if vote.comment.vote == 'Approve':
-                    approval_count += 1
+        if getattr(mp, 'source_git_repository', None):
+            review_vote_parts = []
+            approval_count = 0
+            for vote in mp.votes:
+                if not vote.is_pending:
+                    review_vote_parts.append(vote.reviewer.name)
+                    if vote.comment.vote == 'Approve':
+                        approval_count += 1
 
-        source_repo = mp.source_git_repository
-        target_repo = mp.target_git_repository
-        source_branch = _format_git_branch_name(mp.source_git_path)
-        target_branch = _format_git_branch_name(mp.target_git_path)
+            source_repo = mp.source_git_repository
+            target_repo = mp.target_git_repository
+            source_branch = _format_git_branch_name(mp.source_git_path)
+            target_branch = _format_git_branch_name(mp.target_git_path)
 
-        mp_content.append({
-            'author': mp.registrant.name,
-            'description': mp.description,
-            'short_description': mp.description.splitlines()[0],
-            'reviewers': review_vote_parts,
-            'approval_count': approval_count,
-            'web': mp.web_link,
-            'target_branch': target_branch,
-            'source_branch': source_branch,
-            'target_repo': target_repo.display_name,
-            'source_repo': source_repo.display_name
-        })
+            mp_content.append({
+                'author': mp.registrant.name,
+                'description': mp.description,
+                'short_description': mp.description.splitlines()[0],
+                'reviewers': review_vote_parts,
+                'approval_count': approval_count,
+                'web': mp.web_link,
+                'target_branch': target_branch,
+                'source_branch': source_branch,
+                'target_repo': target_repo.display_name,
+                'source_repo': source_repo.display_name
+            })
     return mp_content
 
 
