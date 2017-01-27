@@ -31,7 +31,8 @@ import git
 
 from launchpadlib.launchpad import Launchpad
 from launchpadlib.credentials import UnencryptedFileCredentialStore
-from pick import pick
+
+from picker import pick
 
 
 def _get_launchpad_client():
@@ -106,9 +107,11 @@ def lpshipit(directory, source_branch, target_branch):
     if mp_summaries:
         mp_options = ["{source_repo}/{source_branch}"
                       "->{target_repo}/{target_branch}"
-                      "\n\t{approval_count} approvals "
+                      "\n\t{short_description}"
+                      "\n\t{approval_count} approvals ({str_reviewers})"
                       "\n\t{web} "
-                      .format(**mp) for mp in mp_summaries]
+                      .format(**mp, str_reviewers=",".join(mp['reviewers']))
+                      for mp in mp_summaries]
         chosen_mp, chosen_mp_index = pick(
             mp_options, "Merge Proposal",
             indicator='=>')
