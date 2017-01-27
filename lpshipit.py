@@ -102,8 +102,8 @@ def lpshipit(directory, source_branch, target_branch):
 
     person = lp.people[lp_user.name]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
-    if mps:
-        mp_summaries = summarize_mps(mps)
+    mp_summaries = summarize_mps(mps)
+    if mp_summaries:
         mp_options = ["{source_repo}/{source_branch}"
                       "->{target_repo}/{target_branch}"
                       "\n\t{approval_count} approvals "
