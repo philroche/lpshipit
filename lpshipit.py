@@ -65,10 +65,14 @@ def summarize_mps(mps):
             source_branch = _format_git_branch_name(mp.source_git_path)
             target_branch = _format_git_branch_name(mp.target_git_path)
 
+            description = '' if mp.description is None else mp.description
+            short_description = '' if mp.description is None \
+                else mp.description.splitlines()[0]
+
             mp_content.append({
                 'author': mp.registrant.name,
-                'description': mp.description,
-                'short_description': mp.description.splitlines()[0],
+                'description': description,
+                'short_description': short_description,
                 'reviewers': review_vote_parts,
                 'approval_count': approval_count,
                 'web': mp.web_link,
