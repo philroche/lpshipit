@@ -93,7 +93,10 @@ def build_commit_msg(author, reviewers, source_branch, target_branch,
               help='Path to local directory')
 @click.option('--source-branch', help='Source branch name')
 @click.option('--target-branch', help='Target Branch name')
-def lpshipit(directory, source_branch, target_branch):
+@click.option('--mp-creator', help='LP username of the creator of the MP '
+                                   '(Defaults to system configured user)',
+              default=None)
+def lpshipit(directory, source_branch, target_branch, mp_creator):
     """Invokes the commit building with proper user inputs."""
     lp = _get_launchpad_client()
     lp_user = lp.me
@@ -101,7 +104,7 @@ def lpshipit(directory, source_branch, target_branch):
     local_git = git.Git(directory)
     checkedout_branch = repo.active_branch
 
-    person = lp.people[lp_user.name]
+    person = lp.people[lp_user.name if mp_creator is None else mp_creator]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
     mp_summaries = summarize_mps(mps)
     if mp_summaries:
