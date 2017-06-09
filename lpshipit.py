@@ -120,7 +120,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                       .format(**mp, str_reviewers=",".join(mp['reviewers']))
                       for mp in mp_summaries]
         chosen_mp, chosen_mp_index = pick(
-            mp_options, "Merge Proposal",
+            mp_options, "Merge Proposal to Merge",
             indicator='=>',
             line_count=4)
 
