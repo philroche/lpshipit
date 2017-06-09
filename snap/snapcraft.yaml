@@ -4,7 +4,7 @@ summary: Helpful utility for merging launchpad MPs (only works for git repos) # 
 description: |
   Helpful utility for merging launchpad MPs (only works for git repos)
 
-grade: devel # must be 'stable' to release into candidate/stable channels
+grade: stable
 confinement: strict # use 'strict' once you have the right plugs and slots
 
 parts:
