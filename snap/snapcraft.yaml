@@ -5,7 +5,7 @@ description: |
   Helpful utility for merging launchpad MPs (only works for git repos)
 
 grade: devel # must be 'stable' to release into candidate/stable channels
-confinement: classic # use 'strict' once you have the right plugs and slots
+confinement: strict # use 'strict' once you have the right plugs and slots
 
 parts:
   lpshipit:
@@ -18,3 +18,7 @@ parts:
 apps:
   lpshipit:
     command: bin/lpshipit
+    plugs:
+      - home
+      - network
+      - network-bind
