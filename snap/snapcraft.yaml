@@ -13,7 +13,7 @@ parts:
     python-version: python3
     source: .
     stage-packages:
-      - python-launchpadlib
+      - python3-launchpadlib
 
 apps:
   lpshipit:
