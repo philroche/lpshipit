@@ -5,7 +5,7 @@ from pick import Picker as PickerUpstream
 class Picker(PickerUpstream):
 
     def __init__(self, options, title=None, indicator='*', default_index=0,
-                 line_count=1):
+                 multi_select=False, min_selection_count=0, line_count=1):
 
         if len(options) == 0:
             raise ValueError('options should not be an empty list')
@@ -13,6 +13,9 @@ class Picker(PickerUpstream):
         self.options = options
         self.title = title
         self.indicator = indicator
+        self.multi_select = multi_select
+        self.min_selection_count = min_selection_count
+        self.all_selected = []
 
         if default_index >= len(options):
             raise ValueError('default_index should be less than the length of options')
