@@ -1,4 +1,4 @@
 simplejson
 click
-pick
+pick==0.5.0
 GitPython
