@@ -5,7 +5,7 @@ description: |
   Helpful utility for merging launchpad MPs (only works for git repos)
 
 grade: stable
-confinement: strict # use 'strict' once you have the right plugs and slots
+confinement: classic
 
 parts:
   lpshipit:
@@ -18,7 +18,7 @@ parts:
 
 apps:
   lpshipit:
-    command: env LC_ALL=C.UTF-8 ${SNAP}/bin/lpshipit
+    command: ./bin/lpshipit
     plugs:
       - home
       - network
