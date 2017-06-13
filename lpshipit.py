@@ -155,7 +155,7 @@ def lpshipit(directory, mp_owner):
                                 ["git", "merge", "--no-ff", source_branch,
                                  "-m", commit_message])
 
-                        merge_summary = "{source_branch} has been merged in to {target_branch} \n Changes have _NOT_ been pushed".format(
+                        merge_summary = "{source_branch} has been merged in to {target_branch} \nChanges have _NOT_ been pushed".format(
                                         source_branch=source_branch,
                                         target_branch=target_branch
                                         )
