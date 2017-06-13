@@ -73,7 +73,7 @@ def summarize_mps(mps):
                 'author': mp.registrant.name,
                 'description': description,
                 'short_description': short_description,
-                'reviewers': review_vote_parts,
+                'reviewers': sorted(review_vote_parts),
                 'approval_count': approval_count,
                 'web': mp.web_link,
                 'target_branch': target_branch,
