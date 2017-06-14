@@ -202,6 +202,13 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                         merge_summary_box = urwid.ListBox(
                                 merge_summary_listwalker)
                         loop.widget = merge_summary_box
+                    else:
+                        error_text = urwid.Text('Source branch and target '
+                                                'branch can not be the same. '
+                                                '\n\nPress Q to exit.')
+                        error_box = urwid.Filler(error_text, 'top')
+                        loop.unhandled_input = urwid_exit_on_q
+                        loop.widget = error_box
 
                 user_args = {'chosen_mp': chosen_mp,
                              'source_branch': chosen_source_branch,
