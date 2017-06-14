@@ -92,8 +92,7 @@ def build_commit_msg(author, reviewers, source_branch, target_branch,
 
 
 @click.command()
-@click.option('--directory', default=os.getcwd(), prompt='Which directory',
-              help='Path to local directory')
+@click.option('--directory', default=None, help='Path to local directory')
 @click.option('--source-branch', help='Source branch name')
 @click.option('--target-branch', help='Target Branch name')
 @click.option('--mp-owner', help='LP username of the owner of the MP '
@@ -103,10 +102,8 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
     """Invokes the commit building with proper user inputs."""
     lp = _get_launchpad_client()
     lp_user = lp.me
-    repo = git.Repo(directory)
-    local_git = git.Git(directory)
-    checkedout_branch = repo.active_branch
 
+    print('Retrieving Merge Proposals from Launchpad...')
     person = lp.people[lp_user.name if mp_owner is None else mp_owner]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
     mp_summaries = summarize_mps(mps)
@@ -129,20 +126,32 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
             raise urwid.ExitMainLoop()
 
         def mp_chosen(user_args, button, chosen_mp):
-            source_branch, target_branch = user_args['source_branch'], \
-                                           user_args['target_branch']
+            source_branch, target_branch, directory, repo = \
+                user_args['source_branch'], \
+                user_args['target_branch'], \
+                user_args['directory'], \
+                user_args['repo']
+
             local_branches = [branch.name for branch in repo.branches]
 
             def source_branch_chosen(user_args, button, chosen_source_branch):
-                chosen_mp, target_branch = user_args['chosen_mp'], \
-                                           user_args['target_branch']
+                chosen_mp, target_branch, directory, repo = \
+                    user_args['chosen_mp'], \
+                    user_args['target_branch'], \
+                    user_args['directory'], \
+                    user_args['repo']
 
                 def target_branch_chosen(user_args, button, target_branch):
 
-                    source_branch, chosen_mp = user_args['source_branch'], \
-                                                   user_args['chosen_mp']
+                    source_branch, chosen_mp, directory, repo = \
+                        user_args['source_branch'], \
+                        user_args['chosen_mp'], \
+                        user_args['directory'], \
+                        user_args['repo']
 
                     if target_branch != source_branch:
+                        local_git = git.Git(directory)
+
                         commit_message = build_commit_msg(
                                 author=chosen_mp['author'],
                                 reviewers=",".join(
@@ -187,8 +196,11 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                         loop.widget = merge_summary_box
 
                 user_args = {'chosen_mp': chosen_mp,
-                             'source_branch': chosen_source_branch}
+                             'source_branch': chosen_source_branch,
+                             'directory': directory,
+                             'repo': repo}
                 if not target_branch:
+                    checkedout_branch = repo.active_branch
                     target_branch_listwalker = urwid.SimpleFocusListWalker(
                         list())
                     target_branch_listwalker.append(
@@ -220,8 +232,11 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                 else:
                     target_branch_chosen(user_args, None, target_branch)
             user_args = {'chosen_mp': chosen_mp,
-                         'target_branch': target_branch}
+                         'target_branch': target_branch,
+                         'directory': directory,
+                         'repo': repo}
             if not source_branch:
+                checkedout_branch = repo.active_branch
                 source_branch_listwalker = urwid.SimpleFocusListWalker(list())
                 source_branch_listwalker.append(urwid.Text(u'Source Branch'))
                 source_branch_listwalker.append(urwid.Divider())
@@ -249,20 +264,49 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
             else:
                 source_branch_chosen(user_args, None, source_branch)
 
-        listwalker = urwid.SimpleFocusListWalker(list())
-        listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
-        listwalker.append(urwid.Divider())
-        user_args = {'source_branch': source_branch,
-                     'target_branch': target_branch}
-        for mp_summary, mp in mp_options.items():
-            button = urwid.Button(mp_summary)
-            urwid.connect_signal(button, 'click', mp_chosen, mp,
-                                 user_args=[user_args])
-            listwalker.append(button)
+        def directory_chosen(directory):
+            repo = git.Repo(directory)
+            listwalker = urwid.SimpleFocusListWalker(list())
+            listwalker.append(urwid.Text(u'Merge Proposal to Merge {}'.format(directory)))
+            listwalker.append(urwid.Divider())
+            user_args = {'source_branch': source_branch,
+                         'target_branch': target_branch,
+                         'directory': directory,
+                         'repo': repo
+                         }
+            for mp_summary, mp in mp_options.items():
+                button = urwid.Button(mp_summary)
+                urwid.connect_signal(button, 'click', mp_chosen, mp,
+                                     user_args=[user_args])
+                listwalker.append(button)
+            mp_box = urwid.ListBox(listwalker)
+            loop.unhandled_input = urwid_exit_on_q
+            loop.widget = mp_box
 
-        box = urwid.ListBox(listwalker)
-        loop = urwid.MainLoop(box, unhandled_input=urwid_exit_on_q)
-        loop.run()
+        if not directory:
+            class GetDirectoryBox(urwid.Filler):
+                def keypress(self, size, key):
+                    if key != 'enter':
+                        return super(GetDirectoryBox, self).keypress(size, key)
+                    chosen_directory = directory_q.edit_text.strip()
+                    if chosen_directory == '':
+                        chosen_directory = os.getcwd()
+                    if os.path.isdir(chosen_directory):
+                        directory_chosen(chosen_directory)
+                    else:
+                        error_text = urwid.Text('{} is not a valid directory. \n\nPress Q to exit.'.format(chosen_directory))
+                        error_box = urwid.Filler(error_text, 'top')
+                        loop.unhandled_input = urwid_exit_on_q
+                        loop.widget = error_box
+
+            directory_q = urwid.Edit(
+                    u"Which directory [{current_directory}]?\n".format(
+                            current_directory=os.getcwd()
+                    ))
+            fill = GetDirectoryBox(directory_q, 'top')
+            loop = urwid.MainLoop(fill, unhandled_input=urwid_exit_on_q)
+            loop.run()
+
 
     else:
         print("You have no Merge Proposals in either "
