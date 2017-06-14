@@ -68,7 +68,7 @@ def summarize_mps(mps):
             short_description = '' if mp.description is None \
                 else mp.description.splitlines()[0]
 
-            mp_content.append({
+            mp_summary = {
                 'author': mp.registrant.name,
                 'description': description,
                 'short_description': short_description,
@@ -78,9 +78,26 @@ def summarize_mps(mps):
                 'target_branch': target_branch,
                 'source_branch': source_branch,
                 'target_repo': target_repo.display_name,
-                'source_repo': source_repo.display_name
-            })
-    return mp_content
+                'source_repo': source_repo.display_name,
+                'date_created': mp.date_created
+            }
+
+            summary = "{source_repo}/{source_branch}" \
+                      "\n->{target_repo}/{target_branch}" \
+                      "\n    {short_description}" \
+                      "\n    {approval_count} approvals ({str_reviewers})" \
+                      "\n    {date_created} - {web}" \
+                .format(**mp_summary, str_reviewers=","
+                        .join(mp_summary['reviewers']))
+
+            mp_summary['summary'] = summary
+
+            mp_content.append(mp_summary)
+
+    sorted_mps = sorted(mp_content,
+                        key=lambda k: k['date_created'],
+                        reverse=True)
+    return sorted_mps
 
 
 def build_commit_msg(author, reviewers, source_branch, target_branch,
@@ -108,15 +125,6 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
     mp_summaries = summarize_mps(mps)
     if mp_summaries:
-        mp_options = {"{source_repo}/{source_branch}"
-                      "\n->{target_repo}/{target_branch}"
-                      "\n    {short_description}"
-                      "\n    {approval_count} approvals ({str_reviewers})"
-                      "\n    {web}"
-                          .format(**mp,
-                                  str_reviewers=",".join(mp['reviewers'])):
-                          mp
-                      for mp in mp_summaries}
 
         def urwid_exit_on_q(key):
             if key in ('q', 'Q'):
@@ -267,15 +275,16 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
         def directory_chosen(directory):
             repo = git.Repo(directory)
             listwalker = urwid.SimpleFocusListWalker(list())
-            listwalker.append(urwid.Text(u'Merge Proposal to Merge {}'.format(directory)))
+            listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
             listwalker.append(urwid.Divider())
             user_args = {'source_branch': source_branch,
                          'target_branch': target_branch,
                          'directory': directory,
                          'repo': repo
                          }
-            for mp_summary, mp in mp_options.items():
-                button = urwid.Button(mp_summary)
+
+            for mp in mp_summaries:
+                button = urwid.Button(mp['summary'])
                 urwid.connect_signal(button, 'click', mp_chosen, mp,
                                      user_args=[user_args])
                 listwalker.append(button)
@@ -294,7 +303,9 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                     if os.path.isdir(chosen_directory):
                         directory_chosen(chosen_directory)
                     else:
-                        error_text = urwid.Text('{} is not a valid directory. \n\nPress Q to exit.'.format(chosen_directory))
+                        error_text = urwid.Text('{} is not a valid directory. '
+                                                '\n\nPress Q to exit.'
+                                                .format(chosen_directory))
                         error_box = urwid.Filler(error_text, 'top')
                         loop.unhandled_input = urwid_exit_on_q
                         loop.widget = error_box
