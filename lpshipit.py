@@ -94,10 +94,12 @@ def build_commit_msg(author, reviewers, source_branch, target_branch,
 @click.command()
 @click.option('--directory', default=os.getcwd(), prompt='Which directory',
               help='Path to local directory')
+@click.option('--source-branch', help='Source branch name')
+@click.option('--target-branch', help='Target Branch name')
 @click.option('--mp-owner', help='LP username of the owner of the MP '
                                  '(Defaults to system configured user)',
               default=None)
-def lpshipit(directory, mp_owner):
+def lpshipit(directory, source_branch, target_branch, mp_owner):
     """Invokes the commit building with proper user inputs."""
     lp = _get_launchpad_client()
     lp_user = lp.me
@@ -126,11 +128,14 @@ def lpshipit(directory, mp_owner):
         def urwid_exit_program(button):
             raise urwid.ExitMainLoop()
 
-        def mp_chosen(button, chosen_mp):
+        def mp_chosen(user_args, button, chosen_mp):
+            source_branch, target_branch = user_args['source_branch'], \
+                                           user_args['target_branch']
             local_branches = [branch.name for branch in repo.branches]
 
             def source_branch_chosen(user_args, button, chosen_source_branch):
-                chosen_mp = user_args['chosen_mp']
+                chosen_mp, target_branch = user_args['chosen_mp'], \
+                                           user_args['target_branch']
 
                 def target_branch_chosen(user_args, button, target_branch):
 
@@ -155,60 +160,81 @@ def lpshipit(directory, mp_owner):
                                 ["git", "merge", "--no-ff", source_branch,
                                  "-m", commit_message])
 
-                        merge_summary = "{source_branch} has been merged in to {target_branch} \nChanges have _NOT_ been pushed".format(
+                        merge_summary = "{source_branch} has been merged " \
+                                        "in to {target_branch} \nChanges " \
+                                        "have _NOT_ been pushed".format(
                                         source_branch=source_branch,
                                         target_branch=target_branch
                                         )
 
                         merge_summary_listwalker = urwid.SimpleFocusListWalker(
                             list())
-                        merge_summary_listwalker.append(urwid.Text(u'Merge Summary'))
-                        merge_summary_listwalker.append(urwid.Divider())
-                        merge_summary_listwalker.append(urwid.Text(merge_summary))
-                        merge_summary_listwalker.append(urwid.Divider())
+                        merge_summary_listwalker.append(
+                                urwid.Text(u'Merge Summary'))
+                        merge_summary_listwalker.append(
+                                urwid.Divider())
+                        merge_summary_listwalker.append(
+                                urwid.Text(merge_summary))
+                        merge_summary_listwalker.append(
+                                urwid.Divider())
                         button = urwid.Button("Exit")
-                        urwid.connect_signal(button, 'click', urwid_exit_program)
+                        urwid.connect_signal(button,
+                                             'click',
+                                             urwid_exit_program)
                         merge_summary_listwalker.append(button)
-                        merge_summary_box = urwid.ListBox(merge_summary_listwalker)
+                        merge_summary_box = urwid.ListBox(
+                                merge_summary_listwalker)
                         loop.widget = merge_summary_box
 
-                        # urwid_exit_program()
-
-                target_branch_listwalker = urwid.SimpleFocusListWalker(list())
                 user_args = {'chosen_mp': chosen_mp,
                              'source_branch': chosen_source_branch}
-                target_branch_listwalker.append(urwid.Text(u'Target Branch'))
-                target_branch_listwalker.append(urwid.Divider())
+                if not target_branch:
+                    target_branch_listwalker = urwid.SimpleFocusListWalker(
+                        list())
+                    target_branch_listwalker.append(
+                            urwid.Text(u'Target Branch'))
+                    target_branch_listwalker.append(urwid.Divider())
+                    for local_branch in local_branches:
+                        button = urwid.Button(local_branch)
+                        urwid.connect_signal(button,
+                                             'click',
+                                             target_branch_chosen,
+                                             local_branch,
+                                             user_args=[user_args])
+                        target_branch_listwalker.append(button)
+
+                    target_branch_box = urwid.ListBox(target_branch_listwalker)
+                    loop.widget = target_branch_box
+                else:
+                    target_branch_chosen(user_args, None, target_branch)
+            user_args = {'chosen_mp': chosen_mp,
+                         'target_branch': target_branch}
+            if not source_branch:
+                source_branch_listwalker = urwid.SimpleFocusListWalker(list())
+                source_branch_listwalker.append(urwid.Text(u'Source Branch'))
+                source_branch_listwalker.append(urwid.Divider())
                 for local_branch in local_branches:
                     button = urwid.Button(local_branch)
-                    urwid.connect_signal(button, 'click', target_branch_chosen,
-                                         local_branch, user_args=[user_args])
-                    target_branch_listwalker.append(button)
+                    urwid.connect_signal(button, 'click',
+                                         source_branch_chosen,
+                                         local_branch,
+                                         user_args=[user_args])
+                    source_branch_listwalker.append(button)
 
-                target_branch_box = urwid.ListBox(target_branch_listwalker)
-                loop.widget = target_branch_box
-
-            user_args = {'chosen_mp': chosen_mp}
-            source_branch_listwalker = urwid.SimpleFocusListWalker(list())
-            source_branch_listwalker.append(urwid.Text(u'Source Branch'))
-            source_branch_listwalker.append(urwid.Divider())
-            for local_branch in local_branches:
-                button = urwid.Button(local_branch)
-                urwid.connect_signal(button, 'click',
-                                     source_branch_chosen,
-                                     local_branch,
-                                     user_args=[user_args])
-                source_branch_listwalker.append(button)
-
-            source_branch_box = urwid.ListBox(source_branch_listwalker)
-            loop.widget = source_branch_box
+                source_branch_box = urwid.ListBox(source_branch_listwalker)
+                loop.widget = source_branch_box
+            else:
+                source_branch_chosen(user_args, None, source_branch)
 
         listwalker = urwid.SimpleFocusListWalker(list())
         listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
         listwalker.append(urwid.Divider())
+        user_args = {'source_branch': source_branch,
+                     'target_branch': target_branch}
         for mp_summary, mp in mp_options.items():
             button = urwid.Button(mp_summary)
-            urwid.connect_signal(button, 'click', mp_chosen, mp)
+            urwid.connect_signal(button, 'click', mp_chosen, mp,
+                                 user_args=[user_args])
             listwalker.append(button)
 
         box = urwid.ListBox(listwalker)
