@@ -194,7 +194,10 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                     target_branch_listwalker.append(
                             urwid.Text(u'Target Branch'))
                     target_branch_listwalker.append(urwid.Divider())
+                    focus_counter = 1
+                    focus = None
                     for local_branch in local_branches:
+                        focus_counter = focus_counter + 1
                         button = urwid.Button(local_branch)
                         urwid.connect_signal(button,
                                              'click',
@@ -202,6 +205,15 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                                              local_branch,
                                              user_args=[user_args])
                         target_branch_listwalker.append(button)
+
+                        if local_branch == chosen_mp['target_branch']:
+                            focus = focus_counter
+                        if local_branch == checkedout_branch.name and \
+                                        focus is None:
+                            focus = focus_counter
+
+                    if focus:
+                        target_branch_listwalker.set_focus(focus)
 
                     target_branch_box = urwid.ListBox(target_branch_listwalker)
                     loop.widget = target_branch_box
@@ -213,13 +225,24 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                 source_branch_listwalker = urwid.SimpleFocusListWalker(list())
                 source_branch_listwalker.append(urwid.Text(u'Source Branch'))
                 source_branch_listwalker.append(urwid.Divider())
+                focus_counter = 1
+                focus = None
                 for local_branch in local_branches:
+                    focus_counter = focus_counter + 1
                     button = urwid.Button(local_branch)
                     urwid.connect_signal(button, 'click',
                                          source_branch_chosen,
                                          local_branch,
                                          user_args=[user_args])
                     source_branch_listwalker.append(button)
+                    if local_branch == chosen_mp['source_branch']:
+                        focus = focus_counter
+                    if local_branch == checkedout_branch.name and \
+                                    focus is None:
+                        focus = focus_counter
+
+                if focus:
+                    source_branch_listwalker.set_focus(focus)
 
                 source_branch_box = urwid.ListBox(source_branch_listwalker)
                 loop.widget = source_branch_box
