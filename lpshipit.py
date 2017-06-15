@@ -215,7 +215,12 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                              'directory': directory,
                              'repo': repo}
                 if not target_branch:
-                    checkedout_branch = repo.active_branch
+                    checkedout_branch = None
+                    try:
+                        checkedout_branch = repo.active_branch
+                    except TypeError:
+                        # This is OK, it more than likely means a detached HEAD
+                        pass
                     target_branch_listwalker = urwid.SimpleFocusListWalker(
                         list())
                     target_branch_listwalker.append(
@@ -235,8 +240,10 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
 
                         if local_branch == chosen_mp['target_branch']:
                             focus = focus_counter
-                        if local_branch == checkedout_branch.name and \
-                                        focus is None:
+                        if checkedout_branch \
+                                and hasattr(checkedout_branch, 'name') \
+                                and local_branch == checkedout_branch.name \
+                                and focus is None:
                             focus = focus_counter
 
                     if focus:
@@ -251,7 +258,12 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                          'directory': directory,
                          'repo': repo}
             if not source_branch:
-                checkedout_branch = repo.active_branch
+                checkedout_branch = None
+                try:
+                    checkedout_branch = repo.active_branch
+                except TypeError:
+                    # This is OK, it more than likely means a detached HEAD
+                    pass
                 source_branch_listwalker = urwid.SimpleFocusListWalker(list())
                 source_branch_listwalker.append(urwid.Text(u'Source Branch'))
                 source_branch_listwalker.append(urwid.Divider())
@@ -267,8 +279,10 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                     source_branch_listwalker.append(button)
                     if local_branch == chosen_mp['source_branch']:
                         focus = focus_counter
-                    if local_branch == checkedout_branch.name and \
-                                    focus is None:
+                    if checkedout_branch \
+                            and hasattr(checkedout_branch, 'name') \
+                            and local_branch == checkedout_branch.name \
+                            and focus is None:
                         focus = focus_counter
 
                 if focus:
