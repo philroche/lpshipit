@@ -134,28 +134,32 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
             raise urwid.ExitMainLoop()
 
         def mp_chosen(user_args, button, chosen_mp):
-            source_branch, target_branch, directory, repo = \
+            source_branch, target_branch, directory, repo, checkedout_branch =\
                 user_args['source_branch'], \
                 user_args['target_branch'], \
                 user_args['directory'], \
-                user_args['repo']
+                user_args['repo'], \
+                user_args['checkedout_branch']
 
             local_branches = [branch.name for branch in repo.branches]
 
             def source_branch_chosen(user_args, button, chosen_source_branch):
-                chosen_mp, target_branch, directory, repo = \
+                chosen_mp, target_branch, directory, repo, checkedout_branch =\
                     user_args['chosen_mp'], \
                     user_args['target_branch'], \
                     user_args['directory'], \
-                    user_args['repo']
+                    user_args['repo'], \
+                    user_args['checkedout_branch']
 
                 def target_branch_chosen(user_args, button, target_branch):
 
-                    source_branch, chosen_mp, directory, repo = \
+                    source_branch, chosen_mp, directory, repo, \
+                    checkedout_branch = \
                         user_args['source_branch'], \
                         user_args['chosen_mp'], \
                         user_args['directory'], \
-                        user_args['repo']
+                        user_args['repo'], \
+                        user_args['checkedout_branch']
 
                     if target_branch != source_branch:
                         local_git = git.Git(directory)
@@ -213,14 +217,9 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                 user_args = {'chosen_mp': chosen_mp,
                              'source_branch': chosen_source_branch,
                              'directory': directory,
-                             'repo': repo}
+                             'repo': repo,
+                             'checkedout_branch': checkedout_branch}
                 if not target_branch:
-                    checkedout_branch = None
-                    try:
-                        checkedout_branch = repo.active_branch
-                    except TypeError:
-                        # This is OK, it more than likely means a detached HEAD
-                        pass
                     target_branch_listwalker = urwid.SimpleFocusListWalker(
                         list())
                     target_branch_listwalker.append(
@@ -256,14 +255,9 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
             user_args = {'chosen_mp': chosen_mp,
                          'target_branch': target_branch,
                          'directory': directory,
-                         'repo': repo}
+                         'repo': repo,
+                         'checkedout_branch': checkedout_branch}
             if not source_branch:
-                checkedout_branch = None
-                try:
-                    checkedout_branch = repo.active_branch
-                except TypeError:
-                    # This is OK, it more than likely means a detached HEAD
-                    pass
                 source_branch_listwalker = urwid.SimpleFocusListWalker(list())
                 source_branch_listwalker.append(urwid.Text(u'Source Branch'))
                 source_branch_listwalker.append(urwid.Divider())
@@ -295,13 +289,20 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
 
         def directory_chosen(directory):
             repo = git.Repo(directory)
+            checkedout_branch = None
+            try:
+                checkedout_branch = repo.active_branch
+            except TypeError:
+                # This is OK, it more than likely means a detached HEAD
+                pass
             listwalker = urwid.SimpleFocusListWalker(list())
             listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
             listwalker.append(urwid.Divider())
             user_args = {'source_branch': source_branch,
                          'target_branch': target_branch,
                          'directory': directory,
-                         'repo': repo
+                         'repo': repo,
+                         'checkedout_branch': checkedout_branch
                          }
 
             for mp in mp_summaries:
