@@ -26,6 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'lpshipit = lpshipit:lpshipit',
+            'lpmpmessage = lpmpmessage:lpmpmessage',
         ],
     },
 )

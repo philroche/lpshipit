@@ -19,3 +19,5 @@ parts:
 apps:
   lpshipit:
     command: ./bin/lpshipit
+  lpmpmessage:
+    command: ./bin/lpmpmessage
