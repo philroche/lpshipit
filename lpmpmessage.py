@@ -27,6 +27,9 @@ import urwid
 from launchpadlib.launchpad import Launchpad
 from launchpadlib.credentials import UnencryptedFileCredentialStore
 
+# Global var to store the chosen MP's commit message
+MP_MESSAGE_OUTPUT = None
+
 
 def _get_launchpad_client():
     cred_location = os.path.expanduser('~/.lp_creds')
@@ -125,7 +128,8 @@ def lpmpmessage(mp_owner):
                 raise urwid.ExitMainLoop()
 
         def mp_chosen(button, chosen_mp):
-            commit_message = build_commit_msg(
+            global MP_MESSAGE_OUTPUT
+            MP_MESSAGE_OUTPUT = build_commit_msg(
                     author=chosen_mp['author'],
                     reviewers=",".join(
                             chosen_mp['reviewers']),
@@ -135,13 +139,7 @@ def lpmpmessage(mp_owner):
                         'description'],
                     mp_web_link=chosen_mp['web']
             )
-
-            commit_message_text = urwid.Text('{}'
-                                             '\n\nPress Q to exit.'
-                                             .format(commit_message))
-            commit_message_box = urwid.Filler(commit_message_text, 'top')
-            loop.unhandled_input = urwid_exit_on_q
-            loop.widget = commit_message_box
+            raise urwid.ExitMainLoop()
 
         listwalker = urwid.SimpleFocusListWalker(list())
         listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
@@ -153,8 +151,11 @@ def lpmpmessage(mp_owner):
             listwalker.append(button)
         mp_box = urwid.ListBox(listwalker)
         loop = urwid.MainLoop(mp_box, unhandled_input=urwid_exit_on_q)
-        loop.run()
-
+        try:
+            loop.run()
+        finally:
+            if MP_MESSAGE_OUTPUT:
+                print(MP_MESSAGE_OUTPUT)
 
     else:
         print("You have no Merge Proposals in either "
