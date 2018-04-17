@@ -65,13 +65,16 @@ def summarize_mps(mps):
             target_branch = _format_git_branch_name(mp.target_git_path)
 
             description = '' if mp.description is None else mp.description
-            short_description = '' if mp.description is None \
-                else mp.description.splitlines()[0]
+            commit_message = description if mp.commit_message is None \
+                else mp.commit_message
+
+            short_commit_message = '' if commit_message is None \
+                else commit_message.splitlines()[0]
 
             mp_summary = {
                 'author': mp.registrant.name,
-                'description': description,
-                'short_description': short_description,
+                'commit_message': commit_message,
+                'short_commit_message': short_commit_message,
                 'reviewers': sorted(review_vote_parts),
                 'approval_count': approval_count,
                 'web': mp.web_link,
@@ -81,10 +84,10 @@ def summarize_mps(mps):
                 'source_repo': source_repo.display_name,
                 'date_created': mp.date_created
             }
-
+            print(mp_summary)
             summary = "{source_repo}/{source_branch}" \
                       "\n->{target_repo}/{target_branch}" \
-                      "\n    {short_description}" \
+                      "\n    {short_commit_message}" \
                       "\n    {approval_count} approvals ({str_reviewers})" \
                       "\n    {date_created} - {web}" \
                 .format(**mp_summary, str_reviewers=","
