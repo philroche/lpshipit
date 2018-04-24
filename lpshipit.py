@@ -84,7 +84,7 @@ def summarize_mps(mps):
                 'source_repo': source_repo.display_name,
                 'date_created': mp.date_created
             }
-            print(mp_summary)
+
             summary = "{source_repo}/{source_branch}" \
                       "\n->{target_repo}/{target_branch}" \
                       "\n    {short_commit_message}" \
@@ -174,7 +174,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                                 source_branch=source_branch,
                                 target_branch=target_branch,
                                 commit_message=chosen_mp[
-                                    'description'],
+                                    'commit_message'],
                                 mp_web_link=chosen_mp['web']
                         )
 
