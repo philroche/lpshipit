@@ -64,8 +64,8 @@ def summarize_mps(mps):
             source_branch = _format_git_branch_name(mp.source_git_path)
             target_branch = _format_git_branch_name(mp.target_git_path)
 
-            description = '' if mp.description is None else mp.description
-            commit_message = description if mp.commit_message is None \
+            description = '' if not mp.description else mp.description
+            commit_message = description if not mp.commit_message \
                 else mp.commit_message
 
             short_commit_message = '' if not commit_message \
