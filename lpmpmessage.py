@@ -139,7 +139,7 @@ def lpmpmessage(mp_owner):
                     source_branch=chosen_mp['source_branch'],
                     target_branch=chosen_mp['target_branch'],
                     commit_message=chosen_mp[
-                        'description'],
+                        'commit_message'],
                     mp_web_link=chosen_mp['web']
             )
             raise urwid.ExitMainLoop()
