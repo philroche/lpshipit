@@ -55,11 +55,11 @@ def summarize_mps(mps):
                 if vote.comment.vote == 'Approve':
                     approval_count += 1
 
-        description = '' if mp.description is None else mp.description
-        commit_message = description if mp.commit_message is None \
+        description = '' if not mp.description else mp.description
+        commit_message = description if not mp.commit_message \
             else mp.commit_message
 
-        short_commit_message = '' if commit_message is None \
+        short_commit_message = '' if not commit_message \
             else commit_message.splitlines()[0]
 
         if getattr(mp, 'source_git_repository', None):
