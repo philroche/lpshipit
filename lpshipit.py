@@ -68,7 +68,7 @@ def summarize_mps(mps):
             commit_message = description if mp.commit_message is None \
                 else mp.commit_message
 
-            short_commit_message = '' if commit_message is None \
+            short_commit_message = '' if not commit_message \
                 else commit_message.splitlines()[0]
 
             mp_summary = {
