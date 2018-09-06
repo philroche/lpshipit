@@ -19,99 +19,17 @@ Activate your virtualenv and install the requirements::
 `pip install -r requirements.txt`
 
 """
-import os
-
 import click
 import urwid
 
-from launchpadlib.launchpad import Launchpad
-from launchpadlib.credentials import UnencryptedFileCredentialStore
-
+from lpshipit import (
+    build_commit_msg,
+    summarize_mps,
+    _get_launchpad_client,
+    _set_urwid_widget,
+)
 # Global var to store the chosen MP's commit message
 MP_MESSAGE_OUTPUT = None
-
-
-def _get_launchpad_client():
-    cred_location = os.path.expanduser('~/.lp_creds')
-    credential_store = UnencryptedFileCredentialStore(cred_location)
-    return Launchpad.login_with('cpc', 'production', version='devel',
-                                credential_store=credential_store)
-
-
-def _format_git_branch_name(branch_name):
-    if branch_name.startswith('refs/heads/'):
-        return branch_name[len('refs/heads/'):]
-    return branch_name
-
-
-def summarize_mps(mps):
-    mp_content = []
-    for mp in mps:
-        review_vote_parts = []
-        approval_count = 0
-        for vote in mp.votes:
-            if not vote.is_pending:
-                review_vote_parts.append(vote.reviewer.name)
-                if vote.comment.vote == 'Approve':
-                    approval_count += 1
-
-        description = '' if not mp.description else mp.description
-        commit_message = description if not mp.commit_message \
-            else mp.commit_message
-
-        short_commit_message = '' if not commit_message \
-            else commit_message.splitlines()[0]
-
-        if getattr(mp, 'source_git_repository', None):
-            source_repo = '{}/'.format(mp.source_git_repository.display_name)
-            target_repo = '{}/'.format(mp.target_git_repository.display_name)
-            source_branch = _format_git_branch_name(mp.source_git_path)
-            target_branch = _format_git_branch_name(mp.target_git_path)
-        else:
-            source_repo = ''
-            target_repo = ''
-            source_branch = mp.source_branch.display_name
-            target_branch = mp.target_branch.display_name
-
-        mp_summary = {
-            'author': mp.registrant.name,
-            'commit_message': commit_message,
-            'short_commit_message': short_commit_message,
-            'reviewers': sorted(review_vote_parts),
-            'approval_count': approval_count,
-            'web': mp.web_link,
-            'target_branch': target_branch,
-            'source_branch': source_branch,
-            'target_repo': target_repo,
-            'source_repo': source_repo,
-            'date_created': mp.date_created
-        }
-
-        summary = "{source_repo}{source_branch}" \
-                  "\n->{target_repo}{target_branch}" \
-                  "\n    {short_commit_message}" \
-                  "\n    {approval_count} approvals ({str_reviewers})" \
-                  "\n    {date_created} - {web}" \
-            .format(**mp_summary, str_reviewers=","
-                    .join(mp_summary['reviewers']))
-
-        mp_summary['summary'] = summary
-
-        mp_content.append(mp_summary)
-
-    sorted_mps = sorted(mp_content,
-                        key=lambda k: k['date_created'],
-                        reverse=True)
-    return sorted_mps
-
-
-def build_commit_msg(author, reviewers, source_branch, target_branch,
-                     commit_message, mp_web_link):
-    """Builds the agreed convention merge commit message"""
-    return "Merge {} into {} [a={}] [r={}]\n\n{}\n\nMP: {}".format(
-        source_branch, target_branch, author,
-        reviewers, commit_message, mp_web_link)
-
 
 @click.command()
 @click.option('--mp-owner', help='LP username of the owner of the MP '
@@ -120,6 +38,8 @@ def build_commit_msg(author, reviewers, source_branch, target_branch,
 def lpmpmessage(mp_owner):
     lp = _get_launchpad_client()
     lp_user = lp.me
+
+    loop = None  # Set the default value for loop used by Urwid UI
 
     print('Retrieving Merge Proposals from Launchpad...')
     person = lp.people[lp_user.name if mp_owner is None else mp_owner]
@@ -153,9 +73,8 @@ def lpmpmessage(mp_owner):
             urwid.connect_signal(button, 'click', mp_chosen, mp)
             listwalker.append(button)
         mp_box = urwid.ListBox(listwalker)
-        loop = urwid.MainLoop(mp_box, unhandled_input=urwid_exit_on_q)
         try:
-            loop.run()
+            _set_urwid_widget(loop, mp_box, urwid_exit_on_q)
         finally:
             if MP_MESSAGE_OUTPUT:
                 print(MP_MESSAGE_OUTPUT)
