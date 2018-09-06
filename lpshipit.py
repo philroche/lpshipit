@@ -34,6 +34,16 @@ from launchpadlib.launchpad import Launchpad
 from launchpadlib.credentials import UnencryptedFileCredentialStore
 
 
+def _set_urwid_widget(loop, widget, unhandled_input):
+    if loop is None:
+        loop = urwid.MainLoop(widget, unhandled_input=unhandled_input)
+        loop.run()
+    else:
+        loop.unhandled_input = unhandled_input
+        loop.widget = widget
+    return loop
+
+
 def _get_launchpad_client():
     cred_location = os.path.expanduser('~/.lp_creds')
     credential_store = UnencryptedFileCredentialStore(cred_location)
@@ -55,8 +65,8 @@ def summarize_mps(mps):
             approval_count = 0
             for vote in mp.votes:
                 if not vote.is_pending:
-                    review_vote_parts.append(vote.reviewer.name)
                     if vote.comment.vote == 'Approve':
+                        review_vote_parts.append(vote.reviewer.name)
                         approval_count += 1
 
             source_repo = mp.source_git_repository
@@ -127,6 +137,9 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
     person = lp.people[lp_user.name if mp_owner is None else mp_owner]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
     mp_summaries = summarize_mps(mps)
+
+    loop = None  # Set the default value for loop used by Urwid UI
+
     if mp_summaries:
 
         def urwid_exit_on_q(key):
@@ -208,14 +221,15 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                         merge_summary_listwalker.append(button)
                         merge_summary_box = urwid.ListBox(
                                 merge_summary_listwalker)
-                        loop.widget = merge_summary_box
+                        _set_urwid_widget(loop, merge_summary_box,
+                                          urwid_exit_on_q)
                     else:
                         error_text = urwid.Text('Source branch and target '
                                                 'branch can not be the same. '
                                                 '\n\nPress Q to exit.')
                         error_box = urwid.Filler(error_text, 'top')
                         loop.unhandled_input = urwid_exit_on_q
-                        loop.widget = error_box
+                        _set_urwid_widget(loop, error_box, urwid_exit_on_q)
 
                 user_args = {'chosen_mp': chosen_mp,
                              'source_branch': chosen_source_branch,
@@ -252,7 +266,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                         target_branch_listwalker.set_focus(focus)
 
                     target_branch_box = urwid.ListBox(target_branch_listwalker)
-                    loop.widget = target_branch_box
+                    _set_urwid_widget(loop, target_branch_box, urwid_exit_on_q)
                 else:
                     target_branch_chosen(user_args, None, target_branch)
             user_args = {'chosen_mp': chosen_mp,
@@ -286,7 +300,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                     source_branch_listwalker.set_focus(focus)
 
                 source_branch_box = urwid.ListBox(source_branch_listwalker)
-                loop.widget = source_branch_box
+                _set_urwid_widget(loop, source_branch_box, urwid_exit_on_q)
             else:
                 source_branch_chosen(user_args, None, source_branch)
 
@@ -314,8 +328,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                                      user_args=[user_args])
                 listwalker.append(button)
             mp_box = urwid.ListBox(listwalker)
-            loop.unhandled_input = urwid_exit_on_q
-            loop.widget = mp_box
+            _set_urwid_widget(loop, mp_box, urwid_exit_on_q)
 
         if not directory:
             class GetDirectoryBox(urwid.Filler):
@@ -332,17 +345,24 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
                                                 '\n\nPress Q to exit.'
                                                 .format(chosen_directory))
                         error_box = urwid.Filler(error_text, 'top')
-                        loop.unhandled_input = urwid_exit_on_q
-                        loop.widget = error_box
+                        _set_urwid_widget(loop, error_box, urwid_exit_on_q)
 
             directory_q = urwid.Edit(
                     u"Which directory [{current_directory}]?\n".format(
                             current_directory=os.getcwd()
                     ))
             fill = GetDirectoryBox(directory_q, 'top')
-            loop = urwid.MainLoop(fill, unhandled_input=urwid_exit_on_q)
-            loop.run()
+            _set_urwid_widget(loop, fill, urwid_exit_on_q)
 
+        else:
+            if os.path.isdir(directory):
+                directory_chosen(directory)
+            else:
+                error_text = urwid.Text('{} is not a valid directory. '
+                                        '\n\nPress Q to exit.'
+                                        .format(directory))
+                error_box = urwid.Filler(error_text, 'top')
+                _set_urwid_widget(loop, error_box, urwid_exit_on_q)
 
     else:
         print("You have no Merge Proposals in either "
