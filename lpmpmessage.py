@@ -24,18 +24,81 @@ import urwid
 
 from lpshipit import (
     build_commit_msg,
-    summarize_mps,
+    _format_git_branch_name,
     _get_launchpad_client,
     _set_urwid_widget,
 )
 # Global var to store the chosen MP's commit message
 MP_MESSAGE_OUTPUT = None
 
+
+def summarize_all_mps(mps):
+    mp_content = []
+    for mp in mps:
+        review_vote_parts = []
+        approval_count = 0
+        for vote in mp.votes:
+            if not vote.is_pending:
+                review_vote_parts.append(vote.reviewer.name)
+                if vote.comment.vote == 'Approve':
+                    approval_count += 1
+
+        description = '' if not mp.description else mp.description
+        commit_message = description if not mp.commit_message \
+            else mp.commit_message
+
+        short_commit_message = '' if not commit_message \
+            else commit_message.splitlines()[0]
+
+        if getattr(mp, 'source_git_repository', None):
+            source_repo = '{}/'.format(mp.source_git_repository.display_name)
+            target_repo = '{}/'.format(mp.target_git_repository.display_name)
+            source_branch = _format_git_branch_name(mp.source_git_path)
+            target_branch = _format_git_branch_name(mp.target_git_path)
+        else:
+            source_repo = ''
+            target_repo = ''
+            source_branch = mp.source_branch.display_name
+            target_branch = mp.target_branch.display_name
+
+        mp_summary = {
+            'author': mp.registrant.name,
+            'commit_message': commit_message,
+            'short_commit_message': short_commit_message,
+            'reviewers': sorted(review_vote_parts),
+            'approval_count': approval_count,
+            'web': mp.web_link,
+            'target_branch': target_branch,
+            'source_branch': source_branch,
+            'target_repo': target_repo,
+            'source_repo': source_repo,
+            'date_created': mp.date_created
+        }
+
+        summary = "{source_repo}{source_branch}" \
+                  "\n->{target_repo}{target_branch}" \
+                  "\n    {short_commit_message}" \
+                  "\n    {approval_count} approvals ({str_reviewers})" \
+                  "\n    {date_created} - {web}" \
+            .format(**mp_summary, str_reviewers=","
+                    .join(mp_summary['reviewers']))
+
+        mp_summary['summary'] = summary
+
+        mp_content.append(mp_summary)
+
+    sorted_mps = sorted(mp_content,
+                        key=lambda k: k['date_created'],
+                        reverse=True)
+    return sorted_mps
+
+
 @click.command()
 @click.option('--mp-owner', help='LP username of the owner of the MP '
                                  '(Defaults to system configured user)',
               default=None)
-def lpmpmessage(mp_owner):
+@click.option('--debug/--no-debug', default=False)
+def lpmpmessage(mp_owner, debug):
     lp = _get_launchpad_client()
     lp_user = lp.me
 
@@ -44,7 +107,9 @@ def lpmpmessage(mp_owner):
     print('Retrieving Merge Proposals from Launchpad...')
     person = lp.people[lp_user.name if mp_owner is None else mp_owner]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
-    mp_summaries = summarize_mps(mps)
+    if debug:
+        print('Debug: Launchad returned {} merge proposals'.format(len(mps)))
+    mp_summaries = summarize_all_mps(mps)
     if mp_summaries:
         def urwid_exit_on_q(key):
             if key in ('q', 'Q'):

@@ -57,7 +57,7 @@ def _format_git_branch_name(branch_name):
     return branch_name
 
 
-def summarize_mps(mps):
+def summarize_git_mps(mps):
     mp_content = []
     for mp in mps:
         if getattr(mp, 'source_git_repository', None):
@@ -128,7 +128,8 @@ def build_commit_msg(author, reviewers, source_branch, target_branch,
 @click.option('--mp-owner', help='LP username of the owner of the MP '
                                  '(Defaults to system configured user)',
               default=None)
-def lpshipit(directory, source_branch, target_branch, mp_owner):
+@click.option('--debug/--no-debug', default=False)
+def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
     """Invokes the commit building with proper user inputs."""
     lp = _get_launchpad_client()
     lp_user = lp.me
@@ -136,7 +137,9 @@ def lpshipit(directory, source_branch, target_branch, mp_owner):
     print('Retrieving Merge Proposals from Launchpad...')
     person = lp.people[lp_user.name if mp_owner is None else mp_owner]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
-    mp_summaries = summarize_mps(mps)
+    if debug:
+        print('Debug: Launchad returned {} merge proposals'.format(len(mps)))
+    mp_summaries = summarize_git_mps(mps)
 
     loop = None  # Set the default value for loop used by Urwid UI
 
