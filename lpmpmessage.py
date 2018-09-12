@@ -102,8 +102,6 @@ def lpmpmessage(mp_owner, debug):
     lp = _get_launchpad_client()
     lp_user = lp.me
 
-    loop = None  # Set the default value for loop used by Urwid UI
-
     print('Retrieving Merge Proposals from Launchpad...')
     person = lp.people[lp_user.name if mp_owner is None else mp_owner]
     mps = person.getMergeProposals(status=['Needs review', 'Approved'])
@@ -139,7 +137,7 @@ def lpmpmessage(mp_owner, debug):
             listwalker.append(button)
         mp_box = urwid.ListBox(listwalker)
         try:
-            _set_urwid_widget(loop, mp_box, urwid_exit_on_q)
+            _set_urwid_widget(mp_box, urwid_exit_on_q)
         finally:
             if MP_MESSAGE_OUTPUT:
                 print(MP_MESSAGE_OUTPUT)

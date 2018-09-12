@@ -33,15 +33,17 @@ import urwid
 from launchpadlib.launchpad import Launchpad
 from launchpadlib.credentials import UnencryptedFileCredentialStore
 
+URWID_MAIN_LOOP = None
 
-def _set_urwid_widget(loop, widget, unhandled_input):
-    if loop is None:
-        loop = urwid.MainLoop(widget, unhandled_input=unhandled_input)
-        loop.run()
+
+def _set_urwid_widget(widget, unhandled_input):
+    global URWID_MAIN_LOOP
+    if URWID_MAIN_LOOP is None:
+        URWID_MAIN_LOOP = urwid.MainLoop(widget, unhandled_input=unhandled_input)
+        URWID_MAIN_LOOP.run()
     else:
-        loop.unhandled_input = unhandled_input
-        loop.widget = widget
-    return loop
+        URWID_MAIN_LOOP.unhandled_input = unhandled_input
+        URWID_MAIN_LOOP.widget = widget
 
 
 def _get_launchpad_client():
@@ -141,8 +143,6 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
         print('Debug: Launchad returned {} merge proposals'.format(len(mps)))
     mp_summaries = summarize_git_mps(mps)
 
-    loop = None  # Set the default value for loop used by Urwid UI
-
     if mp_summaries:
 
         def urwid_exit_on_q(key):
@@ -171,7 +171,6 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
                     user_args['checkedout_branch']
 
                 def target_branch_chosen(user_args, button, target_branch):
-
                     source_branch, chosen_mp, directory, repo, \
                     checkedout_branch = \
                         user_args['source_branch'], \
@@ -224,15 +223,14 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
                         merge_summary_listwalker.append(button)
                         merge_summary_box = urwid.ListBox(
                                 merge_summary_listwalker)
-                        _set_urwid_widget(loop, merge_summary_box,
+                        _set_urwid_widget(merge_summary_box,
                                           urwid_exit_on_q)
                     else:
                         error_text = urwid.Text('Source branch and target '
                                                 'branch can not be the same. '
                                                 '\n\nPress Q to exit.')
                         error_box = urwid.Filler(error_text, 'top')
-                        loop.unhandled_input = urwid_exit_on_q
-                        _set_urwid_widget(loop, error_box, urwid_exit_on_q)
+                        _set_urwid_widget(error_box, urwid_exit_on_q)
 
                 user_args = {'chosen_mp': chosen_mp,
                              'source_branch': chosen_source_branch,
@@ -269,7 +267,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
                         target_branch_listwalker.set_focus(focus)
 
                     target_branch_box = urwid.ListBox(target_branch_listwalker)
-                    _set_urwid_widget(loop, target_branch_box, urwid_exit_on_q)
+                    _set_urwid_widget(target_branch_box, urwid_exit_on_q)
                 else:
                     target_branch_chosen(user_args, None, target_branch)
             user_args = {'chosen_mp': chosen_mp,
@@ -303,7 +301,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
                     source_branch_listwalker.set_focus(focus)
 
                 source_branch_box = urwid.ListBox(source_branch_listwalker)
-                _set_urwid_widget(loop, source_branch_box, urwid_exit_on_q)
+                _set_urwid_widget(source_branch_box, urwid_exit_on_q)
             else:
                 source_branch_chosen(user_args, None, source_branch)
 
@@ -331,7 +329,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
                                      user_args=[user_args])
                 listwalker.append(button)
             mp_box = urwid.ListBox(listwalker)
-            _set_urwid_widget(loop, mp_box, urwid_exit_on_q)
+            _set_urwid_widget(mp_box, urwid_exit_on_q)
 
         if not directory:
             class GetDirectoryBox(urwid.Filler):
@@ -348,15 +346,14 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
                                                 '\n\nPress Q to exit.'
                                                 .format(chosen_directory))
                         error_box = urwid.Filler(error_text, 'top')
-                        _set_urwid_widget(loop, error_box, urwid_exit_on_q)
+                        _set_urwid_widget(error_box, urwid_exit_on_q)
 
             directory_q = urwid.Edit(
                     u"Which directory [{current_directory}]?\n".format(
                             current_directory=os.getcwd()
                     ))
             fill = GetDirectoryBox(directory_q, 'top')
-            _set_urwid_widget(loop, fill, urwid_exit_on_q)
-
+            _set_urwid_widget(fill, urwid_exit_on_q)
         else:
             if os.path.isdir(directory):
                 directory_chosen(directory)
@@ -365,7 +362,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
                                         '\n\nPress Q to exit.'
                                         .format(directory))
                 error_box = urwid.Filler(error_text, 'top')
-                _set_urwid_widget(loop, error_box, urwid_exit_on_q)
+                _set_urwid_widget(error_box, urwid_exit_on_q)
 
     else:
         print("You have no Merge Proposals in either "
