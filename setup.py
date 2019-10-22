@@ -11,7 +11,7 @@ with open(reqs_path, 'r') as req_file:
 
 setup(
     name='lpshipit',
-    version='0.1',
+    version='0.2',
     install_requires=dependencies,
     url='',
     license='',
@@ -19,7 +19,7 @@ setup(
     author_email='phil.roche@canonical.com',
     description='Helpful utility for merging launchpad MPs'
                 ' (only works for git repos)',
-    packages=find_packages('.'),
+    packages=find_packages(),
     package_dir={'': '.'},
     py_modules=[splitext(basename(path))[0] for path in glob('*.py')],
     include_package_data=True,
@@ -27,6 +27,7 @@ setup(
         'console_scripts': [
             'lpshipit = lpshipit:lpshipit',
             'lpmpmessage = lpmpmessage:lpmpmessage',
+            'lpmptox = lpmptox:lpmptox',
         ],
     },
 )
