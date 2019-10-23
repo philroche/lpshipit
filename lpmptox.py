@@ -35,16 +35,19 @@ from lpshipit import (
 CHOSEN_MP = None
 
 
-def runtox(source_repo, source_branch, command='tox --recreate'):
+def runtox(source_repo, source_branch,
+           tox_command='tox --recreate --parallel auto'):
     with TemporaryDirectory() as local_repo:
-        print('Cloning {} in to tmp directory {} ...'.format(
+        print('Cloning {} (branch {}) in to tmp directory {} ...'.format(
             source_repo,
+            source_branch,
             local_repo))
-        repo = git.Repo.clone_from(source_repo, local_repo)
-        print('Checking out branch {} ... '.format(source_branch))
-        repo.git.checkout(source_branch)
-        print('Running tox in {} ...'.format(local_repo))
-        process = subprocess.Popen(command,
+        git.Repo.clone_from(source_repo, local_repo,
+                            depth=1,
+                            single_branch=True,
+                            branch=source_branch)
+        print('Running `{}` in {} ...'.format(tox_command, local_repo))
+        process = subprocess.Popen(tox_command,
                                    stdout=subprocess.PIPE,
                                    shell=True,
                                    cwd=local_repo)
@@ -98,7 +101,6 @@ def lpmptox(mp_owner, debug):
                 source_repo = CHOSEN_MP['source_repo']
                 source_branch = CHOSEN_MP['source_branch']
                 runtox(source_repo, source_branch)
-
     else:
         print("You have no Merge Proposals in either "
               "'Needs review' or 'Approved' state")
