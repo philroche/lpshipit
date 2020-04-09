@@ -21,6 +21,7 @@ Activate your virtualenv and install the requirements::
 """
 import click
 import git
+import os
 import subprocess
 from tempfile import TemporaryDirectory
 import urwid
@@ -36,23 +37,34 @@ CHOSEN_MP = None
 
 
 def runtox(source_repo, source_branch,
-           tox_command='tox --recreate --parallel auto'):
-    with TemporaryDirectory() as local_repo:
-        print('Cloning {} (branch {}) in to tmp directory {} ...'.format(
-            source_repo,
-            source_branch,
-            local_repo))
-        git.Repo.clone_from(source_repo, local_repo,
-                            depth=1,
-                            single_branch=True,
-                            branch=source_branch)
-        print('Running `{}` in {} ...'.format(tox_command, local_repo))
-        process = subprocess.Popen(tox_command,
-                                   stdout=subprocess.PIPE,
-                                   shell=True,
-                                   cwd=local_repo)
-        while process.poll() is None:
-            print(process.stdout.readline().decode('utf-8').rstrip())
+           tox_command='tox --recreate --parallel auto',
+           output_filepath=os.devnull):
+    with open(output_filepath, "a") as output_file:
+        with TemporaryDirectory() as local_repo:
+            debug_message = 'Cloning {} (branch {}) in to tmp directory {} ...'.format(
+                source_repo,
+                source_branch,
+                local_repo)
+            output_file.write('{}\n'.format(debug_message))
+            output_file.flush()
+            print(debug_message)
+            git.Repo.clone_from(source_repo, local_repo,
+                                depth=1,
+                                single_branch=True,
+                                branch=source_branch)
+            debug_message = 'Running `{}` in {} ...'.format(tox_command, local_repo)
+            output_file.write('{}\n'.format(debug_message))
+            output_file.flush()
+            print(debug_message)
+            process = subprocess.Popen(tox_command,
+                                       stdout=subprocess.PIPE,
+                                       shell=True,
+                                       cwd=local_repo)
+            while process.poll() is None:
+                debug_message = process.stdout.readline().decode('utf-8').rstrip()
+                print(debug_message)
+                output_file.write('{}\n'.format(debug_message))
+                output_file.flush()
     return process.returncode
 
 
