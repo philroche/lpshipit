@@ -31,49 +31,63 @@ from lpshipit import (
     _set_urwid_widget,
     summarize_git_mps,
 )
+from lxc import lxc_container
 
 # Global var to store the chosen MP
 CHOSEN_MP = None
 
+def _write_debug(output_file, message):
+    output_file.write('{}\n'.format(message))
+    output_file.flush()
+    print(message)
+
 
 def runtox(source_repo, source_branch,
            tox_command='tox --recreate --parallel auto',
-           output_filepath=os.devnull):
-    with open(output_filepath, "a") as output_file:
-        with TemporaryDirectory() as local_repo:
-            debug_message = 'Cloning {} (branch {}) in to tmp directory {} ...'.format(
-                source_repo,
-                source_branch,
-                local_repo)
-            output_file.write('{}\n'.format(debug_message))
-            output_file.flush()
-            print(debug_message)
-            git.Repo.clone_from(source_repo, local_repo,
-                                depth=1,
-                                single_branch=True,
-                                branch=source_branch)
-            debug_message = 'Running `{}` in {} ...'.format(tox_command, local_repo)
-            output_file.write('{}\n'.format(debug_message))
-            output_file.flush()
-            print(debug_message)
-            process = subprocess.Popen(tox_command,
-                                       stdout=subprocess.PIPE,
-                                       shell=True,
-                                       cwd=local_repo)
-            while process.poll() is None:
-                debug_message = process.stdout.readline().decode('utf-8').rstrip()
-                print(debug_message)
-                output_file.write('{}\n'.format(debug_message))
-                output_file.flush()
-    return process.returncode
+           output_filepath=os.devnull,
+           environment=None):
+    with open(output_filepath, "a") as output_file, TemporaryDirectory() as local_repo:
+        _write_debug(output_file, 'Cloning {} (branch {}) in to tmp directory {} ...'.format(
+            source_repo,
+            source_branch,
+            local_repo))
+        git.Repo.clone_from(source_repo, local_repo,
+                            depth=1,
+                            single_branch=True,
+                            branch=source_branch)
 
+        if environment is not None:
+            _write_debug(output_file, 'Running `{}` in {} lxc environment ...'.format(tox_command, environment))
+            return _run_tox_in_lxc(environment, local_repo, tox_command, output_file)
+        else:
+           _write_debug(output_file, 'Running `{}` in {} ...'.format(tox_command, local_repo))
+           return _run_tox_locally(local_repo, tox_command, output_file)
+
+def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
+    with lxc_container(environment, local_repo) as container:
+        container.run_command('sudo apt update')
+        container.run_command('sudo apt install -y python3-pip')
+        container.run_command('sudo pip3 install tox')
+        # local_repo is same path in the container
+        return container.run_command(tox_command + ' -c ' + local_repo)
+
+def _run_tox_locally(local_repo, tox_command, output_file):
+    process = subprocess.Popen(tox_command,
+                            stdout=subprocess.PIPE,
+                            shell=True,
+                            cwd=local_repo)
+    while process.poll() is None:
+        _write_debug(output_file, process.stdout.readline().decode('utf-8').rstrip())
+    return process.returncode
+        
 
 @click.command()
 @click.option('--mp-owner', help='LP username of the owner of the MP '
                                  '(Defaults to system configured user)',
               default=None)
 @click.option('--debug/--no-debug', default=False)
-def lpmptox(mp_owner, debug):
+@click.option('--environment', default=None, help = 'release (16.04, 18.04, etc) to run tox in')
+def lpmptox(mp_owner, debug, environment):
     """Invokes the commit building with proper user inputs."""
     lp = _get_launchpad_client()
     lp_user = lp.me
@@ -112,7 +126,7 @@ def lpmptox(mp_owner, debug):
             if CHOSEN_MP:
                 source_repo = CHOSEN_MP['source_repo']
                 source_branch = CHOSEN_MP['source_branch']
-                runtox(source_repo, source_branch)
+                runtox(source_repo, source_branch, environment=environment)
     else:
         print("You have no Merge Proposals in either "
               "'Needs review' or 'Approved' state")
