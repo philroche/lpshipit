@@ -2,4 +2,3 @@ simplejson
 click
 urwid
 GitPython
-launchpadlib

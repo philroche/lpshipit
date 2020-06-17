@@ -10,6 +10,8 @@ class LxcContainer:
         image='ubuntu:{}'.format(environment)
         subprocess.check_output(['lxc', 'launch', image, name]) 
         self.wait_for_networking()
+        self.user = subprocess.check_output(['lxc', 'exec', self.name, '--', 'whoami']).decode('utf-8').strip()
+        self.home = subprocess.check_output(['lxc', 'exec', self.name, '--', 'pwd']).decode('utf-8').strip()
 
     def wait_for_networking(self):
         for _ in range(10):
@@ -23,10 +25,13 @@ class LxcContainer:
                                self.name + '/tmp'])
         subprocess.check_call(['lxc', 'file', 'push', 
                                os.environ['HOME'] + '/.ssh', '-rp',
-                               self.name + '/home/ubuntu/.ssh'])
+                               self.name + self.home])
         subprocess.check_call(['lxc', 'file', 'push', '-rp',
                                os.environ['HOME'] + '/.gitconfig',
-                               self.name + '/home/ubuntu/.gitconfig'])
+                               self.name + self.home])
+        # need to change ownership for ssh to work
+        self.run_command('chown -R {0}:{0} {1}'.format(self.user, self.home))
+
 
 
     def run_command(self, cmd):
