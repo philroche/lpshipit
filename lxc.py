@@ -8,10 +8,19 @@ class LxcContainer:
     def __init__(self, environment, name):
         self.name = name
         image='ubuntu:{}'.format(environment)
-        subprocess.check_output(['lxc', 'launch', image, name]) 
+        subprocess.check_output('lxc launch {} {}'.format(image,name), 
+                                stdin=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                shell=True) 
         self.wait_for_networking()
-        self.user = subprocess.check_output(['lxc', 'exec', self.name, '--', 'whoami']).decode('utf-8').strip()
-        self.home = subprocess.check_output(['lxc', 'exec', self.name, '--', 'pwd']).decode('utf-8').strip()
+        self.user = subprocess.check_output('lxc exec {} -- whoami'.format(self.name),
+                                            stdin=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            shell=True).decode('utf-8').strip()
+        self.home = subprocess.check_output('lxc exec {} -- pwd'.format(self.name),
+                                             stdin=subprocess.PIPE,
+                                             stderr=subprocess.STDOUT,
+                                             shell=True).decode('utf-8').strip()
 
     def wait_for_networking(self):
         for _ in range(10):
@@ -21,14 +30,23 @@ class LxcContainer:
         raise Exception('Networking did not come up in 60 seconds')
     
     def setup_code_directory(self, tmp_directory):
-        subprocess.check_call(['lxc', 'file', 'push', '-rp', tmp_directory , 
-                               self.name + '/tmp'])
-        subprocess.check_call(['lxc', 'file', 'push', 
-                               os.environ['HOME'] + '/.ssh', '-rp',
-                               self.name + self.home])
-        subprocess.check_call(['lxc', 'file', 'push', '-rp',
-                               os.environ['HOME'] + '/.gitconfig',
-                               self.name + self.home])
+        subprocess.check_call('lxc file push -rp {} {}'.format(tmp_directory,
+                                                               self.name + '/tmp'),
+                               stdin=subprocess.PIPE,
+                               stderr=subprocess.STDOUT,
+                               shell=True)
+        subprocess.check_call('lxc file push {} -rp {}'.format( 
+                                                       os.environ['HOME'] + '/.ssh', 
+                                                       self.name + self.home),
+                               stdin=subprocess.PIPE,
+                               stderr=subprocess.STDOUT,
+                               shell=True)
+        subprocess.check_call('lxc file push {} -rp {}'.format( 
+                                                       os.environ['HOME'] + '/.gitconfig', 
+                                                       self.name + self.home),
+                               stdin=subprocess.PIPE,
+                               stderr=subprocess.STDOUT,
+                               shell=True)
         # need to change ownership for ssh to work
         self.run_command('chown -R {0}:{0} {1}'.format(self.user, self.home))
 
@@ -38,6 +56,8 @@ class LxcContainer:
         lxc_command = 'lxc exec {} -- {}'.format(self.name, cmd)
         print("Running {}".format(lxc_command))
         process = subprocess.Popen(lxc_command,
+                        stdin=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
                         stdout=subprocess.PIPE,
                         shell=True)
         while process.poll() is None:
@@ -47,10 +67,16 @@ class LxcContainer:
 
 @contextlib.contextmanager
 def lxc_container(environment, cwd):
-    name = 'cpc-' + subprocess.check_output(['petname']).decode('utf-8').strip()
+    name = 'cpc-' + subprocess.check_output('petname',
+                                            stdin=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            shell=True).decode('utf-8').strip()
     try:
         instance = LxcContainer(environment, name)
         instance.setup_code_directory(cwd)
         yield instance
     finally:
-        subprocess.check_call(['lxc', 'delete', '--force', name])
+        subprocess.check_call('lxc delete --force {}'.format(name),
+                              stdin=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              shell=True)
