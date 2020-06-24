@@ -57,6 +57,7 @@ class LxcContainer:
         print("Running {}".format(lxc_command))
         process = subprocess.Popen(lxc_command,
                         stdin=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
                         stdout=subprocess.PIPE,
                         shell=True)
         while process.poll() is None:
