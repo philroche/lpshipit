@@ -51,10 +51,17 @@ def runtox(source_repo, source_branch,
             source_repo,
             source_branch,
             local_repo))
-        git.Repo.clone_from(source_repo, local_repo,
-                            depth=1,
-                            single_branch=True,
-                            branch=source_branch)
+        repo = git.Repo.clone_from(
+            source_repo,
+            local_repo,
+            depth=1,
+            single_branch=True,
+            branch=source_branch
+        )
+        _write_debug(output_file, '{} {}'.format(
+            repo.head.object.hexsha,
+            repo.head.object.summary
+        )
 
         if environment is not None:
             _write_debug(output_file, 'Running `{}` in {} lxc environment ...'.format(tox_command, environment))
@@ -79,7 +86,7 @@ def _run_tox_locally(local_repo, tox_command, output_file):
     while process.poll() is None:
         _write_debug(output_file, process.stdout.readline().decode('utf-8').rstrip())
     return process.returncode
-        
+
 
 @click.command()
 @click.option('--mp-owner', help='LP username of the owner of the MP '
