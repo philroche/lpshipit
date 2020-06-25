@@ -61,7 +61,7 @@ def runtox(source_repo, source_branch,
         _write_debug(output_file, '{} {}'.format(
             repo.head.object.hexsha,
             repo.head.object.summary
-        )
+        ))
 
         if environment is not None:
             _write_debug(output_file, 'Running `{}` in {} lxc environment ...'.format(tox_command, environment))
