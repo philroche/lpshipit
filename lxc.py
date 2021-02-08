@@ -23,6 +23,23 @@ class LxcContainer:
                                              shell=True).decode('utf-8').strip()
 
     def wait_for_networking(self):
+        # Is there a local proxy configured that we should be configuring
+        if os.environ.get('proxy_http', None):
+            print("Configuring lxc proxy_http {}"
+                  .format(os.environ.get('proxy_http')))
+            subprocess.check_call("lxc config set core.proxy_http {}"
+                                  .format(os.environ.get('proxy_http')),
+                                  stdin=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT,
+                                  shell=True)
+        if os.environ.get('proxy_https', None):
+            print("Configuring lxc proxy_https {}"
+                  .format(os.environ.get('proxy_https')))
+            subprocess.check_call("lxc config set core.proxy_https {}"
+                                  .format(os.environ.get('proxy_https')),
+                                  stdin=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT,
+                                  shell=True)
         for _ in range(10):
             if self.run_command('sh -c "curl -s --head http://archive.ubuntu.com > /dev/null"') == 0:
                 return  # We have networking, exit out
