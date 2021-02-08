@@ -73,7 +73,8 @@ def runtox(source_repo, source_branch,
 def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
     with lxc_container(environment, local_repo) as container:
         container.run_command('sudo apt update')
-        container.run_command('sudo apt install -y python3-pip tox')
+        container.run_command('sudo apt install -y python3-pip')
+        container.run_command('sudo pip3 install tox')
         # local_repo is same path in the container
         return container.run_command(tox_command + ' -c ' + local_repo)
 
