@@ -10,21 +10,23 @@ class LxcContainer:
         image='ubuntu:{}'.format(environment)
         # Is there a local proxy configured that we should be configuring
         print('Is there a local proxy configured that we should be configuring?')
+        http_proxy = os.environ.get('http_proxy', None)
+        https_proxy = os.environ.get('https_proxy', None)
         print(os.environ.get('http_proxy', 'http_proxy not set'))
         print(os.environ.get('https_proxy', 'https_proxy not set'))
-        if os.environ.get('proxy_http', None):
-            print("Configuring lxc proxy_http {}"
-                  .format(os.environ.get('proxy_http')))
+        if http_proxy is not None:
+            print("Configuring lxc http_proxy {}"
+                  .format(os.environ.get('http_proxy')))
             subprocess.check_call("lxc config set core.proxy_http {}"
-                                  .format(os.environ.get('proxy_http')),
+                                  .format(http_proxy),
                                   stdin=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   shell=True)
-        if os.environ.get('proxy_https', None):
-            print("Configuring lxc proxy_https {}"
-                  .format(os.environ.get('proxy_https')))
+        if https_proxy is not None:
+            print("Configuring lxc https_proxy {}"
+                  .format(https_proxy))
             subprocess.check_call("lxc config set core.proxy_https {}"
-                                  .format(os.environ.get('proxy_https')),
+                                  .format(https_proxy),
                                   stdin=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   shell=True)
