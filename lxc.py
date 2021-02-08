@@ -8,22 +8,10 @@ class LxcContainer:
     def __init__(self, environment, name):
         self.name = name
         image='ubuntu:{}'.format(environment)
-        subprocess.check_output('lxc launch {} {}'.format(image,name), 
-                                stdin=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                shell=True) 
-        self.wait_for_networking()
-        self.user = subprocess.check_output('lxc exec {} -- whoami'.format(self.name),
-                                            stdin=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT,
-                                            shell=True).decode('utf-8').strip()
-        self.home = subprocess.check_output('lxc exec {} -- pwd'.format(self.name),
-                                             stdin=subprocess.PIPE,
-                                             stderr=subprocess.STDOUT,
-                                             shell=True).decode('utf-8').strip()
-
-    def wait_for_networking(self):
         # Is there a local proxy configured that we should be configuring
+        print('Is there a local proxy configured that we should be configuring?')
+        print(os.environ.get('http_proxy', 'http_proxy not set'))
+        print(os.environ.get('https_proxy', 'https_proxy not set'))
         if os.environ.get('proxy_http', None):
             print("Configuring lxc proxy_http {}"
                   .format(os.environ.get('proxy_http')))
@@ -40,6 +28,22 @@ class LxcContainer:
                                   stdin=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   shell=True)
+        subprocess.check_output('lxc launch {} {}'.format(image,name), 
+                                stdin=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                shell=True) 
+        self.wait_for_networking()
+        self.user = subprocess.check_output('lxc exec {} -- whoami'.format(self.name),
+                                            stdin=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            shell=True).decode('utf-8').strip()
+        self.home = subprocess.check_output('lxc exec {} -- pwd'.format(self.name),
+                                             stdin=subprocess.PIPE,
+                                             stderr=subprocess.STDOUT,
+                                             shell=True).decode('utf-8').strip()
+
+    def wait_for_networking(self):
+
         for _ in range(10):
             if self.run_command('sh -c "curl -s --head http://archive.ubuntu.com > /dev/null"') == 0:
                 return  # We have networking, exit out
