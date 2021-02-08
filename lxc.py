@@ -2,31 +2,31 @@ import contextlib
 import os
 import subprocess
 import time
-
+from urllib.parse import urlparse
 
 class LxcContainer:
     def __init__(self, environment, name):
         self.name = name
         image='ubuntu:{}'.format(environment)
         # Is there a local proxy configured that we should be configuring
-        print('Is there a local proxy configured that we should be configuring?')
-        http_proxy = os.environ.get('http_proxy', None)
-        https_proxy = os.environ.get('https_proxy', None)
-        print(os.environ.get('http_proxy', 'http_proxy not set'))
-        print(os.environ.get('https_proxy', 'https_proxy not set'))
-        if http_proxy is not None:
+        self.proxy_netloc = None
+        self.http_proxy = os.environ.get('http_proxy', None)
+        self.https_proxy = os.environ.get('https_proxy', None)
+        if self.http_proxy is not None:
+            self.proxy_netloc = urlparse(self.http_proxy).netloc
             print("Configuring lxc http_proxy {}"
                   .format(os.environ.get('http_proxy')))
             subprocess.check_call("lxc config set core.proxy_http {}"
-                                  .format(http_proxy),
+                                  .format(self.http_proxy),
                                   stdin=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   shell=True)
-        if https_proxy is not None:
+        if self.https_proxy is not None:
+            self.proxy_netloc = urlparse(self.https_proxy).netloc
             print("Configuring lxc https_proxy {}"
-                  .format(https_proxy))
+                  .format(self.https_proxy))
             subprocess.check_call("lxc config set core.proxy_https {}"
-                                  .format(https_proxy),
+                                  .format(self.https_proxy),
                                   stdin=subprocess.PIPE,
                                   stderr=subprocess.STDOUT,
                                   shell=True)
