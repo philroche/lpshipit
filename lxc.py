@@ -12,24 +12,21 @@ class LxcContainer:
         self.proxy_netloc = None
         self.http_proxy = os.environ.get('http_proxy', None)
         self.https_proxy = os.environ.get('https_proxy', None)
-        print("lxc http_proxy environ {}".format(self.http_proxy))
-        print("lxc https_proxy environ {}".format(self.https_proxy))
-        self.http_proxy_up = os.environ.get('HTTP_PROXY', None)
-        self.https_proxy_up = os.environ.get('HTTPS_PROXY', None)
-        print("lxc HTTP_PROXY environ {}".format(self.http_proxy_up))
-        print("lxc HTTPS_PROXY environ {}".format(self.https_proxy_up))
-        lxc_proxy_http = subprocess.check_output(
+        print("host http_proxy environ {}".format(self.http_proxy))
+        print("host https_proxy environ {}".format(self.https_proxy))
+
+        lxc_host_proxy_http = subprocess.check_output(
             'lxc config get core.proxy_http',
             stdin=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             shell=True).decode('utf-8').strip()
-        print("lxc core.proxy_http {}".format(lxc_proxy_http))
-        lxc_proxy_https = subprocess.check_output(
+        print("lxc core.proxy_http {}".format(lxc_host_proxy_http))
+        lxc_host_proxy_https = subprocess.check_output(
             'lxc config get core.proxy_https',
             stdin=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             shell=True).decode('utf-8').strip()
-        print("lxc core.proxy_https {}".format(lxc_proxy_https))
+        print("lxc core.proxy_https {}".format(lxc_host_proxy_https))
 
         if self.http_proxy is not None:
             self.proxy_netloc = urlparse(self.http_proxy).netloc
@@ -62,6 +59,19 @@ class LxcContainer:
                                              stdin=subprocess.PIPE,
                                              stderr=subprocess.STDOUT,
                                              shell=True).decode('utf-8').strip()
+        lxc_env = subprocess.check_output(
+            'lxc exec {} -- env'.format(self.name),
+            stdin=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True).decode('utf-8').strip()
+        print("lxc env {}".format(lxc_env))
+
+        sudo_lxc_env = subprocess.check_output(
+            'sudo lxc exec {} -- sudo env'.format(self.name),
+            stdin=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True).decode('utf-8').strip()
+        print("sudo lxc env {}".format(sudo_lxc_env))
 
     def wait_for_networking(self):
 
