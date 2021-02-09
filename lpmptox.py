@@ -72,8 +72,17 @@ def runtox(source_repo, source_branch,
 
 def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
     with lxc_container(environment, local_repo) as container:
-        container.run_command('sudo apt update')
-        container.run_command('sudo apt install -y python3-pip tox')
+        # If a proxy has been configured on the host using environment
+        # variables http_proxy or https_proxy then the container will inherit
+        # this proxy config for the default user. However then calling sudo
+        # this proxy config is no longer configured. To fix this and so sudo
+        # calls use the same proxy we can use `--preserve-env`
+        # http://manpages.ubuntu.com/manpages/focal/man8/sudo.8.html to pass
+        # in a list of environment variables we want set for sudo user too.
+        sudo_preserve_proxy = '--preserve-env="http_proxy,https_proxy"'
+        container.run_command('sudo {} apt-get update'.format(sudo_preserve_proxy))
+        container.run_command('sudo {} apt-get install -y python3-pip'.format(sudo_preserve_proxy))
+        container.run_command('sudo {} pip3 install tox'.format(sudo_preserve_proxy))
         # local_repo is same path in the container
         return container.run_command(tox_command + ' -c ' + local_repo)
 
