@@ -73,6 +73,13 @@ class LxcContainer:
             shell=True).decode('utf-8').strip()
         print("sudo lxc env {}".format(sudo_lxc_env))
 
+        sudo_lxc_env_preserved_proxy = subprocess.check_output(
+            'sudo lxc exec {} -- sudo --preserve-env="http_proxy,https_proxy" env'.format(self.name),
+            stdin=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True).decode('utf-8').strip()
+        print("sudo lxc env preserved proxy {}".format(sudo_lxc_env_preserved_proxy))
+
     def wait_for_networking(self):
 
         for _ in range(10):
