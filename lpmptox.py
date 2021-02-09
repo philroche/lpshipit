@@ -76,6 +76,7 @@ def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
         container.run_command('sudo apt-get install -y python3-pip')
         pip_proxy = "--proxy {}"\
             .format(container.proxy_netloc) if container.proxy_netloc else ""
+        pip_proxy = ""
         container.run_command('sudo pip3 {} install tox'.format(pip_proxy))
         # local_repo is same path in the container
         return container.run_command(tox_command + ' -c ' + local_repo)
