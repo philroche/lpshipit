@@ -14,22 +14,22 @@ class LxcContainer:
         self.https_proxy = os.environ.get('https_proxy', None)
         if self.http_proxy is not None:
             self.proxy_netloc = urlparse(self.http_proxy).netloc
-            print("Configuring lxc http_proxy {}"
-                  .format(os.environ.get('http_proxy')))
-            subprocess.check_call("lxc config set core.proxy_http {}"
-                                  .format(self.http_proxy),
-                                  stdin=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT,
-                                  shell=True)
+            # print("Configuring lxc http_proxy {}"
+            #       .format(os.environ.get('http_proxy')))
+            # subprocess.check_call("lxc config set core.proxy_http {}"
+            #                       .format(self.http_proxy),
+            #                       stdin=subprocess.PIPE,
+            #                       stderr=subprocess.STDOUT,
+            #                       shell=True)
         if self.https_proxy is not None:
             self.proxy_netloc = urlparse(self.https_proxy).netloc
-            print("Configuring lxc https_proxy {}"
-                  .format(self.https_proxy))
-            subprocess.check_call("lxc config set core.proxy_https {}"
-                                  .format(self.https_proxy),
-                                  stdin=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT,
-                                  shell=True)
+            # print("Configuring lxc https_proxy {}"
+            #       .format(self.https_proxy))
+            # subprocess.check_call("lxc config set core.proxy_https {}"
+            #                       .format(self.https_proxy),
+            #                       stdin=subprocess.PIPE,
+            #                       stderr=subprocess.STDOUT,
+            #                       shell=True)
         subprocess.check_output('lxc launch {} {}'.format(image,name), 
                                 stdin=subprocess.PIPE,
                                 stderr=subprocess.STDOUT,
