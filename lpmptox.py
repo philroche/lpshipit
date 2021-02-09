@@ -72,12 +72,12 @@ def runtox(source_repo, source_branch,
 
 def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
     with lxc_container(environment, local_repo) as container:
-        container.run_command('sudo apt-get update')
-        container.run_command('sudo apt-get install -y python3-pip')
+        container.run_command('sudo --preserve-env="http_proxy,https_proxy" apt-get update')
+        container.run_command('sudo --preserve-env="http_proxy,https_proxy" apt-get install -y python3-pip')
         pip_proxy = "--proxy {}"\
             .format(container.proxy_netloc) if container.proxy_netloc else ""
         pip_proxy = ""
-        container.run_command('sudo pip3 {} install tox'.format(pip_proxy))
+        container.run_command('sudo --preserve-env="http_proxy,https_proxy" pip3 {} install tox'.format(pip_proxy))
         # local_repo is same path in the container
         return container.run_command(tox_command + ' -c ' + local_repo)
 
