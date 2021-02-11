@@ -64,11 +64,17 @@ def runtox(source_repo, source_branch,
         ))
 
         if environment is not None:
-            _write_debug(output_file, 'Running `{}` in {} lxc environment ...'.format(tox_command, environment))
-            return _run_tox_in_lxc(environment, local_repo, tox_command, output_file)
+            _write_debug(output_file,
+                         'Running `{}` in {} lxc environment ...'.format(
+                             tox_command, environment))
+            return _run_tox_in_lxc(environment, local_repo, tox_command,
+                                   output_file)
         else:
-           _write_debug(output_file, 'Running `{}` in {} ...'.format(tox_command, local_repo))
-           return _run_tox_locally(local_repo, tox_command, output_file)
+            _write_debug(output_file,
+                         'Running `{}` in {} ...'.format(tox_command,
+                                                         local_repo))
+            return _run_tox_locally(local_repo, tox_command, output_file)
+
 
 def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
     with lxc_container(environment, local_repo) as container:
@@ -84,7 +90,11 @@ def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
         container.run_command('sudo {} apt-get install -y python3-pip'.format(sudo_preserve_proxy))
         container.run_command('sudo {} pip3 install tox'.format(sudo_preserve_proxy))
         # local_repo is same path in the container
-        return container.run_command(tox_command + ' -c ' + local_repo)
+        tox_returncode, tox_output = container.run_command(
+            tox_command + ' -c ' + local_repo)
+        _write_debug(output_file, tox_output)
+        return tox_returncode
+
 
 def _run_tox_locally(local_repo, tox_command, output_file):
     process = subprocess.Popen(tox_command,
@@ -100,51 +110,55 @@ def _run_tox_locally(local_repo, tox_command, output_file):
 @click.option('--mp-owner', help='LP username of the owner of the MP '
                                  '(Defaults to system configured user)',
               default=None)
+@click.option('--source-repo', help='Repository to test', default=None)
+@click.option('--source-branch', help='Branch to test', default=None)
 @click.option('--debug/--no-debug', default=False)
-@click.option('--environment', default=None, help = 'release (16.04, 18.04, etc) to run tox in')
-def lpmptox(mp_owner, debug, environment):
+@click.option('--environment', default=None, help='release (16.04, 18.04, etc) to run tox in')
+def lpmptox(mp_owner, source_repo, source_branch, debug, environment):
     """Invokes the commit building with proper user inputs."""
-    lp = _get_launchpad_client()
-    lp_user = lp.me
+    if not source_repo and not source_branch:
+        lp = _get_launchpad_client()
+        lp_user = lp.me
 
-    print('Retrieving Merge Proposals from Launchpad...')
-    person = lp.people[lp_user.name if mp_owner is None else mp_owner]
-    mps = person.getMergeProposals(status=['Needs review', 'Approved'])
-    if debug:
-        print('Debug: Launchad returned {} merge proposals'.format(len(mps)))
-    mp_summaries = summarize_git_mps(mps)
+        print('Retrieving Merge Proposals from Launchpad...')
+        person = lp.people[lp_user.name if mp_owner is None else mp_owner]
+        mps = person.getMergeProposals(status=['Needs review', 'Approved'])
+        if debug:
+            print('Debug: Launchad returned {} merge proposals'.format(len(mps)))
+        mp_summaries = summarize_git_mps(mps)
 
-    if mp_summaries:
+        if mp_summaries:
 
-        def urwid_exit_on_q(key):
-            if key in ('q', 'Q'):
+            def urwid_exit_on_q(key):
+                if key in ('q', 'Q'):
+                    raise urwid.ExitMainLoop()
+
+            def mp_chosen(button, chosen_mp):
+                global CHOSEN_MP
+                CHOSEN_MP = chosen_mp
+
                 raise urwid.ExitMainLoop()
 
-        def mp_chosen(button, chosen_mp):
-            global CHOSEN_MP
-            CHOSEN_MP = chosen_mp
+            listwalker = urwid.SimpleFocusListWalker(list())
+            listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
+            listwalker.append(urwid.Divider())
 
-            raise urwid.ExitMainLoop()
+            for mp in mp_summaries:
+                button = urwid.Button(mp['summary'])
+                urwid.connect_signal(button, 'click', mp_chosen, mp)
+                listwalker.append(button)
+            mp_box = urwid.ListBox(listwalker)
+            try:
+                _set_urwid_widget(mp_box, urwid_exit_on_q)
+            finally:
+                if CHOSEN_MP:
+                    source_repo = CHOSEN_MP['source_repo']
+                    source_branch = CHOSEN_MP['source_branch']
 
-        listwalker = urwid.SimpleFocusListWalker(list())
-        listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
-        listwalker.append(urwid.Divider())
-
-        for mp in mp_summaries:
-            button = urwid.Button(mp['summary'])
-            urwid.connect_signal(button, 'click', mp_chosen, mp)
-            listwalker.append(button)
-        mp_box = urwid.ListBox(listwalker)
-        try:
-            _set_urwid_widget(mp_box, urwid_exit_on_q)
-        finally:
-            if CHOSEN_MP:
-                source_repo = CHOSEN_MP['source_repo']
-                source_branch = CHOSEN_MP['source_branch']
-                runtox(source_repo, source_branch, environment=environment)
-    else:
-        print("You have no Merge Proposals in either "
-              "'Needs review' or 'Approved' state")
+        else:
+            print("You have no Merge Proposals in either "
+                  "'Needs review' or 'Approved' state")
+    runtox(source_repo, source_branch, environment=environment)
 
 
 if __name__ == "__main__":
