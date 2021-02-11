@@ -64,11 +64,17 @@ def runtox(source_repo, source_branch,
         ))
 
         if environment is not None:
-            _write_debug(output_file, 'Running `{}` in {} lxc environment ...'.format(tox_command, environment))
-            return _run_tox_in_lxc(environment, local_repo, tox_command, output_file)
+            _write_debug(output_file,
+                         'Running `{}` in {} lxc environment ...'.format(
+                             tox_command, environment))
+            return _run_tox_in_lxc(environment, local_repo, tox_command,
+                                   output_file)
         else:
-           _write_debug(output_file, 'Running `{}` in {} ...'.format(tox_command, local_repo))
-           return _run_tox_locally(local_repo, tox_command, output_file)
+            _write_debug(output_file,
+                         'Running `{}` in {} ...'.format(tox_command,
+                                                         local_repo))
+            return _run_tox_locally(local_repo, tox_command, output_file)
+
 
 def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
     with lxc_container(environment, local_repo) as container:
@@ -84,7 +90,11 @@ def _run_tox_in_lxc(environment, local_repo, tox_command, output_file):
         container.run_command('sudo {} apt-get install -y python3-pip'.format(sudo_preserve_proxy))
         container.run_command('sudo {} pip3 install tox'.format(sudo_preserve_proxy))
         # local_repo is same path in the container
-        return container.run_command(tox_command + ' -c ' + local_repo)
+        tox_returncode, tox_output = container.run_command(
+            tox_command + ' -c ' + local_repo)
+        _write_debug(output_file, tox_output)
+        return tox_returncode
+
 
 def _run_tox_locally(local_repo, tox_command, output_file):
     process = subprocess.Popen(tox_command,
