@@ -25,6 +25,7 @@ Activate your virtualenv and install the requirements::
 
 """
 import os
+import re
 import sys
 
 import click
@@ -36,6 +37,18 @@ from launchpadlib.credentials import UnencryptedFileCredentialStore
 
 URWID_MAIN_LOOP = None
 
+
+def convert_remotes_to_lp_urls(repo):
+    result = []
+    for remote in repo.remotes:
+        url = remote.url
+        if re.search(r'^lp:', url):
+            result.append(remote.url)
+        else:
+            result.append(
+                re.sub(r'.*launchpad\.net/', 'lp:', url)
+            )
+    return result
 
 def _set_urwid_widget(widget, unhandled_input):
     global URWID_MAIN_LOOP
@@ -134,6 +147,15 @@ def build_commit_msg(author, reviewers, source_branch, target_branch,
 @click.option('--debug/--no-debug', default=False)
 def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
     """Invokes the commit building with proper user inputs."""
+    if not directory:
+        directory = os.getcwd()
+
+    if not os.path.isdir(directory):
+        print("'%s' is not a directory" % directory)
+        sys.exit(1)
+
+    repo = git.Repo(directory)
+
     lp = _get_launchpad_client()
     lp_user = lp.me
 
@@ -147,6 +169,20 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
     if not mp_summaries:
         print("You have no Merge Proposals in either "
               "'Needs review' or 'Approved' state")
+        sys.exit(1)
+
+    # filter MPs that aren't related to the chosen directory based on the
+    # URLs of git repo remotes
+    remotes = convert_remotes_to_lp_urls(repo)
+    mp_summaries = filter(
+        lambda item: item['target_repo'] in remotes or
+                     item['source_repo'] in remotes,
+        mp_summaries
+    )
+
+    if not mp_summaries:
+        print("You have no merge proposals matching "
+              "repo remote URLs in '%s'" % directory)
         sys.exit(1)
 
     def urwid_exit_on_q(key):
@@ -309,65 +345,29 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
         else:
             source_branch_chosen(user_args, None, source_branch)
 
-    def directory_chosen(directory):
-        repo = git.Repo(directory)
-        checkedout_branch = None
-        try:
-            checkedout_branch = repo.active_branch
-        except TypeError:
-            # This is OK, it more than likely means a detached HEAD
-            pass
-        listwalker = urwid.SimpleFocusListWalker(list())
-        listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
-        listwalker.append(urwid.Divider())
-        user_args = {'source_branch': source_branch,
-                     'target_branch': target_branch,
-                     'directory': directory,
-                     'repo': repo,
-                     'checkedout_branch': checkedout_branch
-                     }
+    checkedout_branch = None
+    try:
+        checkedout_branch = repo.active_branch
+    except TypeError:
+        # This is OK, it more than likely means a detached HEAD
+        pass
+    listwalker = urwid.SimpleFocusListWalker(list())
+    listwalker.append(urwid.Text(u'Merge Proposal to Merge'))
+    listwalker.append(urwid.Divider())
+    user_args = {'source_branch': source_branch,
+                 'target_branch': target_branch,
+                 'directory': directory,
+                 'repo': repo,
+                 'checkedout_branch': checkedout_branch
+                 }
 
-        for mp in mp_summaries:
-            button = urwid.Button(mp['summary'])
-            urwid.connect_signal(button, 'click', mp_chosen, mp,
-                                 user_args=[user_args])
-            listwalker.append(button)
-        mp_box = urwid.ListBox(listwalker)
-        _set_urwid_widget(mp_box, urwid_exit_on_q)
-
-    if not directory:
-        class GetDirectoryBox(urwid.Filler):
-            def keypress(self, size, key):
-                if key != 'enter':
-                    return super(GetDirectoryBox, self).keypress(size, key)
-                chosen_directory = directory_q.edit_text.strip()
-                if chosen_directory == '':
-                    chosen_directory = os.getcwd()
-                if os.path.isdir(chosen_directory):
-                    directory_chosen(chosen_directory)
-                else:
-                    error_text = urwid.Text('{} is not a valid directory. '
-                                            '\n\nPress Q to exit.'
-                                            .format(chosen_directory))
-                    error_box = urwid.Filler(error_text, 'top')
-                    _set_urwid_widget(error_box, urwid_exit_on_q)
-
-        directory_q = urwid.Edit(
-                u"Which directory [{current_directory}]?\n".format(
-                        current_directory=os.getcwd()
-                ))
-        fill = GetDirectoryBox(directory_q, 'top')
-        _set_urwid_widget(fill, urwid_exit_on_q)
-    else:
-        if os.path.isdir(directory):
-            directory_chosen(directory)
-        else:
-            error_text = urwid.Text('{} is not a valid directory. '
-                                    '\n\nPress Q to exit.'
-                                    .format(directory))
-            error_box = urwid.Filler(error_text, 'top')
-            _set_urwid_widget(error_box, urwid_exit_on_q)
-
+    for mp in mp_summaries:
+        button = urwid.Button(mp['summary'])
+        urwid.connect_signal(button, 'click', mp_chosen, mp,
+                             user_args=[user_args])
+        listwalker.append(button)
+    mp_box = urwid.ListBox(listwalker)
+    _set_urwid_widget(mp_box, urwid_exit_on_q)
 
 
 if __name__ == "__main__":
