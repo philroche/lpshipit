@@ -1,41 +1,43 @@
 name: lpshipit # you probably want to 'snapcraft register <name>'
-version: '0.4.8' # just for humans, typically '1.2+git' or '1.3.2'
+version: '0.5.0' # just for humans, typically '1.2+git' or '1.3.2'
+base: core20
 summary: Helpful utility for merging and testing launchpad MPs # 79 char long summary
 description: |
-  Helpful utility for mergingand testing launchpad MPs (only works for git repos)
+  Helpful utility for merging and testing launchpad MPs (only works for git repos)
 
 grade: stable
 confinement: classic
+environment:
+    LC_ALL: C.UTF-8
+    LANG: C.UTF-8
+
+architectures:
+  - build-on: amd64
+    run-on: amd64
 
 parts:
   lpshipit:
     plugin: python
-    python-version: python3
     source: .
+    source-type: git
+    build-environment:
+      - PYTHONPATH: "$SNAPCRAFT_PART_INSTALL/usr/lib/python3/dist-packages"
+    python-packages:
+      - launchpadlib
     stage-packages:
-      - git
-      - python3-launchpadlib
-  lpshipit-wrappers:
-    plugin: dump
-    source: snap/local
-    override-build: |
-      chmod +x lpshipit_wrapper
-      chmod +x lpmpmessage_wrapper
-      chmod +x lpmptox_wrapper
-      snapcraftctl build
-    stage:
-      - usr/bin/lpshipit_wrapper
-      - usr/bin/lpmpmessage_wrapper
-      - usr/bin/lpmptox_wrapper
-    organize:
-      lpshipit_wrapper: usr/bin/lpshipit_wrapper
-      lpmpmessage_wrapper: usr/bin/lpmpmessage_wrapper
-      lpmptox_wrapper: usr/bin/lpmptox_wrapper
+      - python3-wheel
+
 apps:
   lpshipit:
-    command: usr/bin/lpshipit_wrapper
+    environment:
+      PYTHONPATH: $SNAP/lib/python3.8/site-packages:$PYTHONPATH
+    command: bin/lpshipit
   lpmpmessage:
-    command: usr/bin/lpmpmessage_wrapper
+    environment:
+      PYTHONPATH: $SNAP/lib/python3.8/site-packages:$PYTHONPATH
+    command: bin/lpmpmessage
   lpmptox:
-    command: usr/bin/lpmptox_wrapper
+    environment:
+      PYTHONPATH: $SNAP/lib/python3.8/site-packages:$PYTHONPATH
+    command: bin/lpmptox
 
