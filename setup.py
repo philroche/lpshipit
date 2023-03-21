@@ -11,7 +11,7 @@ with open(reqs_path, 'r') as req_file:
 
 setup(
     name='lpshipit',
-    version='0.5.0',
+    version='0.5.1',
     install_requires=dependencies,
     url='',
     license='',
