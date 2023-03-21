@@ -154,7 +154,7 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
         print("'%s' is not a directory" % directory)
         sys.exit(1)
 
-    repo = git.Repo(directory)
+    repo = git.Repo(directory, search_parent_directories=True)
 
     lp = _get_launchpad_client()
     lp_user = lp.me
