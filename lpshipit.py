@@ -145,7 +145,9 @@ def build_commit_msg(author, reviewers, source_branch, target_branch,
                                  '(Defaults to system configured user)',
               default=None)
 @click.option('--debug/--no-debug', default=False)
-def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
+@click.option('--fetch', is_flag=False, flag_value="origin", default=None,
+              help="fetch from remote before merging")
+def lpshipit(directory, source_branch, target_branch, mp_owner, debug, fetch):
     """Invokes the commit building with proper user inputs."""
     if not directory:
         directory = os.getcwd()
@@ -221,6 +223,19 @@ def lpshipit(directory, source_branch, target_branch, mp_owner, debug):
 
                 if target_branch != source_branch:
                     local_git = git.Git(directory)
+
+                    if fetch:
+                        local_git.fetch(fetch)
+                        remote_diff = local_git.log(f"{target_branch}..{fetch}/{target_branch}", oneline=True)
+                        if remote_diff:
+                            error_text = urwid.Text(
+                                "Remote has unapplied changes.\n"
+                                "You might need to pull them.\n\n"
+                                f"{remote_diff}"
+                                "\n\nPress Q to exit.")
+                            error_box = urwid.Filler(error_text, 'top')
+                            _set_urwid_widget(error_box, urwid_exit_on_q)
+                            return
 
                     commit_message = build_commit_msg(
                             author=chosen_mp['author'],
