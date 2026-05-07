@@ -1,4 +1,4 @@
 simplejson
 click
-urwid
+urwid>=3.0.3
 GitPython
